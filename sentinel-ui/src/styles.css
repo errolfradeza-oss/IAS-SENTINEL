@@ -204,6 +204,17 @@ body {
     overflow-y: auto;
 }
 
+/* =========================================================
+   PAGES
+   ========================================================= */
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
 
 /* =========================================================
    TOP BAR
@@ -622,4 +633,460 @@ body {
     background: #344252;
 }
 
-/* scan results */
+/* ============================================================
+   QUARANTINE PAGE
+   ============================================================ */
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+
+/* ============================================================
+   QUARANTINE HEADER
+   ============================================================ */
+
+.quarantine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 22px;
+}
+
+.page-kicker {
+    color: #60a5fa;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+
+    margin-bottom: 6px;
+}
+
+.quarantine-header h1 {
+    font-size: 25px;
+    font-weight: 650;
+    letter-spacing: -0.4px;
+}
+
+.quarantine-header p {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+
+/* ============================================================
+   COUNT
+   ============================================================ */
+
+.quarantine-count {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+
+    padding: 10px 14px;
+
+    background: var(--surface);
+    border: 1px solid var(--border);
+
+    border-radius: 8px;
+
+    color: var(--muted);
+
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+}
+
+.quarantine-count span:first-child {
+    color: var(--text);
+
+    font-size: 20px;
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   WARNING
+   ============================================================ */
+
+.quarantine-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+
+    padding: 15px 17px;
+
+    margin-bottom: 20px;
+
+    background: rgba(245, 158, 11, 0.06);
+
+    border: 1px solid rgba(245, 158, 11, 0.16);
+
+    border-radius: 10px;
+}
+
+.warning-icon {
+    width: 30px;
+    height: 30px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: rgba(245, 158, 11, 0.1);
+
+    border: 1px solid rgba(245, 158, 11, 0.2);
+
+    color: #fbbf24;
+
+    font-weight: 700;
+}
+
+.quarantine-warning strong {
+    display: block;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.quarantine-warning p {
+    margin-top: 4px;
+
+    color: var(--muted);
+
+    font-size: 11px;
+
+    line-height: 1.5;
+}
+
+
+/* ============================================================
+   QUARANTINE PANEL
+   ============================================================ */
+
+.quarantine-panel {
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    overflow: hidden;
+}
+
+.quarantine-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 18px 20px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.quarantine-panel-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.quarantine-panel-header p {
+    margin-top: 4px;
+
+    color: var(--muted);
+
+    font-size: 11px;
+}
+
+
+/* ============================================================
+   DELETE ALL
+   ============================================================ */
+
+.delete-all-button {
+    background: transparent;
+
+    border: 1px solid rgba(239, 68, 68, 0.3);
+
+    color: #f87171;
+
+    padding: 8px 12px;
+
+    border-radius: 7px;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.delete-all-button:hover {
+    background: rgba(239, 68, 68, 0.08);
+
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+
+/* ============================================================
+   FILE LIST
+   ============================================================ */
+
+.quarantine-list {
+    width: 100%;
+}
+
+
+/* ============================================================
+   QUARANTINE ITEM
+   ============================================================ */
+
+.quarantine-item {
+    display: flex;
+    align-items: center;
+
+    gap: 15px;
+
+    padding: 17px 20px;
+
+    border-bottom: 1px solid var(--border);
+
+    transition:
+        background 0.15s ease;
+}
+
+.quarantine-item:last-child {
+    border-bottom: none;
+}
+
+.quarantine-item:hover {
+    background: var(--surface-light);
+}
+
+
+/* ============================================================
+   FILE ICON
+   ============================================================ */
+
+.quarantine-file-icon {
+    width: 40px;
+    height: 40px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 8px;
+
+    background: rgba(239, 68, 68, 0.08);
+
+    border: 1px solid rgba(239, 68, 68, 0.15);
+
+    color: #f87171;
+
+    font-size: 17px;
+}
+
+
+/* ============================================================
+   FILE INFORMATION
+   ============================================================ */
+
+.quarantine-file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.quarantine-file-name {
+    font-size: 13px;
+    font-weight: 600;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.quarantine-file-path {
+    margin-top: 4px;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* ============================================================
+   DETECTION INFORMATION
+   ============================================================ */
+
+.quarantine-detection {
+    min-width: 150px;
+}
+
+.detection-label {
+    color: var(--muted);
+
+    font-size: 9px;
+    font-weight: 600;
+
+    letter-spacing: 0.6px;
+}
+
+.detection-name {
+    margin-top: 4px;
+
+    color: #fca5a5;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   SEVERITY
+   ============================================================ */
+
+.quarantine-severity {
+    min-width: 75px;
+}
+
+.severity-badge {
+    display: inline-block;
+
+    padding: 4px 7px;
+
+    border-radius: 5px;
+
+    background: rgba(239, 68, 68, 0.08);
+
+    color: #f87171;
+
+    font-size: 9px;
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+}
+
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+
+.quarantine-actions {
+    display: flex;
+
+    gap: 7px;
+}
+
+.quarantine-action {
+    border: 1px solid var(--border);
+
+    background: transparent;
+
+    padding: 7px 10px;
+
+    border-radius: 6px;
+
+    font-size: 10px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+
+/* RESTORE */
+
+.restore-button {
+    color: #60a5fa;
+}
+
+.restore-button:hover {
+    background: rgba(59, 130, 246, 0.08);
+
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+
+/* DELETE */
+
+.delete-button {
+    color: #f87171;
+}
+
+.delete-button:hover {
+    background: rgba(239, 68, 68, 0.08);
+
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+
+.quarantine-empty {
+    min-height: 250px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+}
+
+.quarantine-empty-icon {
+    width: 48px;
+    height: 48px;
+
+    margin-bottom: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: rgba(34, 197, 94, 0.08);
+
+    border: 1px solid rgba(34, 197, 94, 0.15);
+
+    color: var(--success);
+
+    font-size: 20px;
+}
+
+.quarantine-empty h3 {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.quarantine-empty p {
+    margin-top: 5px;
+
+    color: var(--muted);
+
+    font-size: 11px;
+}
