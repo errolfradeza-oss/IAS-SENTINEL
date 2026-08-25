@@ -26,28 +26,27 @@
             </div>
 
             <nav class="navigation">
-
-                <button class="nav-item active">
+                <button class="nav-item active" data-page="dashboard">
                     <span>▣</span>
                     Dashboard
                 </button>
 
-                <button class="nav-item">
+                <button class="nav-item" data-page="scan">
                     <span>⌕</span>
                     Scan
                 </button>
 
-                <button class="nav-item">
+                <button class="nav-item" data-page="quarantine">
                     <span>▤</span>
                     Quarantine
                 </button>
 
-                <button class="nav-item">
+                <button class="nav-item" data-page="history">
                     <span>◷</span>
                     History
                 </button>
 
-                <button class="nav-item">
+                <button class="nav-item" data-page="settings">
                     <span>⚙</span>
                     Settings
                 </button>
@@ -63,169 +62,271 @@
 
 
         <!-- MAIN CONTENT -->
-        <main class="main">
+        <main class="main" id="mainContent">
 
-            <!-- TOP BAR -->
-            <header class="topbar">
-
-                <div>
-                    <h1>Dashboard</h1>
-                    <p>Monitor your system's security status.</p>
-                </div>
-
-                <div class="protection-status">
-                    <span class="status-dot"></span>
-                    <span id="protectionStatus">PROTECTED</span>
-                </div>
-
-            </header>
-
-
-            <!-- SECURITY CARD -->
-            <section class="security-card">
-                <div class="security-icon" id="securityIcon">
-                    ✓
-                </div>
-
-                <div class="security-info">
-                    <span class="security-label">
-                        SYSTEM STATUS
-                    </span>
-
-                    <h2 id="securityTitle">
-                        System Secure
-                    </h2>
-
-                    <p id="securityDescription">
-                        No known threats have been detected.
-                    </p>
-                </div>
-
-                <button class="scan-button" id="scanButton">
-                    START SCAN
-                </button>
-            </section>
-
-
-            <!-- STATISTICS -->
-            <section class="stats">
-
-                <div class="stat-card">
-
-                    <div class="stat-title">
-                        FILES SCANNED
-                    </div>
-
-                    <div class="stat-value" id="filesScanned">
-                        0
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-title">
-                        THREATS FOUND
-                    </div>
-
-                    <div class="stat-value threat" id="threatsFound">
-                        0
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-title">
-                        LAST SCAN
-                    </div>
-
-                    <div class="stat-value small">
-                        Never
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- SCAN SECTION -->
-            <section class="panel">
-
-                <div class="panel-header">
+            <section id="dashboardPage" class="page active">
+                <!-- TOP BAR -->
+                <header class="topbar">
 
                     <div>
-                        <h3>Scan</h3>
-
-                        <p>
-                            Select a folder to scan for known threats.
-                        </p>
+                        <h1>Dashboard</h1>
+                        <p>Monitor your system's security status.</p>
                     </div>
 
-                    <div class="scan-state" id="scanState">
-                        READY
+                    <div class="protection-status">
+                        <span class="status-dot"></span>
+                        <span id="protectionStatus">PROTECTED</span>
                     </div>
 
-                </div>
+                </header>
 
 
-                <div class="scan-area">
-
-                    <div class="scan-symbol">
-                        ⌕
-                    </div>
-
-                    <h3>Ready to scan</h3>
-
-                    <p>
-                        Sentinel will calculate file hashes and compare
-                        them against the local threat database.
-                    </p>
-
-                    <button
-                        class="secondary-button"
-                        id="selectFolderButton"
-                    >
-                        SELECT FOLDER
-                    </button>
-
-                </div>
-
-            </section>
-
-
-            <!-- RESULTS -->
-            <section class="panel results-panel">
-
-                <div class="panel-header">
-
-                    <div>
-                        <h3>Recent Results</h3>
-
-                        <p>
-                            Results from your latest scan.
-                        </p>
-                    </div>
-
-                </div>
-
-                <div class="results-empty" id="results">
-
-                    <div class="empty-icon">
+                <!-- SECURITY CARD -->
+                <section class="security-card">
+                    <div class="security-icon" id="securityIcon">
                         ✓
                     </div>
 
-                    <span>
-                        No threats detected yet.
-                    </span>
+                    <div class="security-info">
+                        <span class="security-label">
+                            SYSTEM STATUS
+                        </span>
+
+                        <h2 id="securityTitle">
+                            System Secure
+                        </h2>
+
+                        <p id="securityDescription">
+                            No known threats have been detected.
+                        </p>
+                    </div>
+
+                    <button class="scan-button" id="scanButton">
+                        START SCAN
+                    </button>
+                </section>
+                    
+
+                <!-- STATISTICS -->
+                <section class="stats">
+
+                    <div class="stat-card">
+
+                        <div class="stat-title">
+                            FILES SCANNED
+                        </div>
+
+                        <div class="stat-value" id="filesScanned">
+                            0
+                        </div>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-title">
+                            THREATS FOUND
+                        </div>
+
+                        <div class="stat-value threat" id="threatsFound">
+                            0
+                        </div>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-title">
+                            LAST SCAN
+                        </div>
+
+                        <div class="stat-value small">
+                            Never
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- SCAN SECTION -->
+                <section class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <h3>Scan</h3>
+
+                            <p>
+                                Select a folder to scan for known threats.
+                            </p>
+                        </div>
+
+                        <div class="scan-state" id="scanState">
+                            READY
+                        </div>
+
+                    </div>
+
+
+                    <div class="scan-area">
+
+                        <div class="scan-symbol">
+                            ⌕
+                        </div>
+
+                        <h3>Ready to scan</h3>
+
+                        <p>
+                            Sentinel will calculate file hashes and compare
+                            them against the local threat database.
+                        </p>
+
+                        <button
+                            class="secondary-button"
+                            id="selectFolderButton"
+                        >
+                            SELECT FOLDER
+                        </button>
+
+                    </div>
+
+                </section>
+
+
+                <!-- RESULTS -->
+                <section class="panel results-panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <h3>Recent Results</h3>
+
+                            <p>
+                                Results from your latest scan.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="results-empty" id="results">
+
+                        <div class="empty-icon">
+                            ✓
+                        </div>
+
+                        <span>
+                            No threats detected yet.
+                        </span>
+
+                    </div>
+
+                </section>
+            </section>
+
+            <section id="quarantinePage" class="page">
+
+                <!-- QUARANTINE HEADER -->
+                <header class="quarantine-header">
+                    <div>
+                        <div class="page-kicker">THREAT MANAGEMENT</div>
+                        <h1>Quarantine</h1>
+                        <p>
+                            Review and manage files that Sentinel has isolated.
+                        </p>
+                    </div>
+
+                    <div class="quarantine-count">
+                        <span id="quarantineCount">0</span>
+                        <span>ITEMS</span>
+                    </div>
+                </header>
+
+
+                <!-- WARNING -->
+                <div class="quarantine-warning">
+
+                    <div class="warning-icon">
+                        !
+                    </div>
+
+                    <div>
+                        <strong>Quarantined files are isolated</strong>
+
+                        <p>
+                            These files have been prevented from interacting with
+                            the rest of your system. Only restore a file if you
+                            are certain it is safe.
+                        </p>
+                    </div>
 
                 </div>
+
+
+                <!-- QUARANTINE LIST -->
+                <section class="quarantine-panel">
+
+                    <div class="quarantine-panel-header">
+
+                        <div>
+                            <h2>Quarantined Files</h2>
+
+                            <p>
+                                Files detected by Sentinel and moved into isolation.
+                            </p>
+                        </div>
+
+                        <button
+                            class="delete-all-button"
+                            id="deleteAllQuarantine"
+                        >
+                            DELETE ALL
+                        </button>
+
+                    </div>
+
+
+                    <!-- FILE LIST -->
+
+                    <div
+                        class="quarantine-list"
+                        id="quarantineList"
+                    >
+
+                        <!--
+                            JavaScript will insert quarantined
+                            files here.
+                        -->
+
+                        <div
+                            class="quarantine-empty"
+                            id="quarantineEmpty"
+                        >
+
+                            <div class="quarantine-empty-icon">
+                                ✓
+                            </div>
+
+                            <h3>
+                                Quarantine is empty
+                            </h3>
+
+                            <p>
+                                Sentinel hasn't isolated any files.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </section>
 
             </section>
 
         </main>
+
 
     </div>
 

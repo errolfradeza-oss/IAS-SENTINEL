@@ -206,3 +206,99 @@ scanButton.addEventListener("click", async () => {
     scanButton.disabled = false;
     selectFolderButton.disabled = false;
 });
+
+// ============================================================
+// SIDEBAR NAVIGATION
+// ============================================================
+
+const navItems = document.querySelectorAll(".nav-item");
+const mainContent = document.querySelector("#mainContent");
+
+const dashboardPage = document.querySelector("#dashboardPage");
+const quarantinePage = document.querySelector("#quarantinePage");
+
+// ============================================================
+// PAGE SWITCHING
+// ============================================================
+
+function hideAllPages() {
+    document.querySelectorAll(".page").forEach((page) => {
+        page.classList.remove("active");
+    });
+}
+
+function showDashboard() {
+    hideAllPages();
+    dashboardPage.classList.add("active");
+}
+
+function showQuarantine() {
+    hideAllPages();
+    quarantinePage.classList.add("active");
+}
+
+function showScan() {
+    showDashboard();
+
+    const scanSection = scanState.closest(".panel");
+
+    if (scanSection) {
+        scanSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+}
+
+function showHistory() {
+    // Placeholder for now
+    console.log("History page not implemented yet.");
+}
+
+function showSettings() {
+    // Placeholder for now
+    console.log("Settings page not implemented yet.");
+}
+
+//sidebar navigation
+navItems.forEach((item) => {
+
+    item.addEventListener("click", () => {
+
+        // Remove active state from every button
+        navItems.forEach((nav) => {
+            nav.classList.remove("active");
+        });
+
+        // Activate clicked button
+        item.classList.add("active");
+
+        const page = item.dataset.page;
+
+        // Change main content
+        switch (page) {
+
+            case "dashboard":
+                showDashboard();
+                break;
+
+            case "scan":
+                showScan();
+                break;
+
+            case "quarantine":
+                showQuarantine();
+                break;
+
+            case "history":
+                showHistory();
+                break;
+
+            case "settings":
+                showSettings();
+                break;
+        }
+
+    });
+
+});
