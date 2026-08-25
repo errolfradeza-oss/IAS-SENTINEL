@@ -1,0 +1,625 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --background: #0b0f14;
+    --sidebar: #0e131a;
+    --surface: #121820;
+    --surface-light: #171f29;
+    --border: #202a35;
+
+    --text: #f1f5f9;
+    --muted: #8995a3;
+
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+
+    --success: #22c55e;
+    --danger: #ef4444;
+}
+
+body {
+    font-family:
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    background: var(--background);
+    color: var(--text);
+
+    min-height: 100vh;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   APP
+   ========================================================= */
+
+.app {
+    display: flex;
+
+    width: 100vw;
+    height: 100vh;
+
+    background: var(--background);
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.sidebar {
+    width: 230px;
+
+    background: var(--sidebar);
+
+    border-right: 1px solid var(--border);
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 24px 14px;
+}
+
+
+/* BRAND */
+
+.brand {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 4px 10px 28px;
+}
+
+.brand-icon {
+    width: 38px;
+    height: 38px;
+
+    border-radius: 10px;
+
+    background: var(--accent);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 19px;
+    font-weight: 700;
+
+    color: white;
+}
+
+.brand-name {
+    font-size: 15px;
+    font-weight: 700;
+
+    letter-spacing: 1.2px;
+}
+
+.brand-subtitle {
+    margin-top: 2px;
+
+    font-size: 11px;
+
+    color: var(--muted);
+}
+
+
+/* NAVIGATION */
+
+.navigation {
+    display: flex;
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+.nav-item {
+    width: 100%;
+
+    border: none;
+
+    background: transparent;
+
+    color: var(--muted);
+
+    padding: 11px 12px;
+
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    text-align: left;
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
+}
+
+.nav-item span {
+    width: 18px;
+
+    text-align: center;
+
+    font-size: 15px;
+}
+
+.nav-item:hover {
+    background: var(--surface);
+
+    color: var(--text);
+}
+
+.nav-item.active {
+    background: rgba(59, 130, 246, 0.12);
+
+    color: #60a5fa;
+}
+
+
+/* SIDEBAR FOOTER */
+
+.sidebar-footer {
+    margin-top: auto;
+
+    padding: 12px 10px;
+
+    color: #647181;
+
+    font-size: 11px;
+
+    display: flex;
+    justify-content: space-between;
+}
+
+.sidebar-footer span {
+    color: #4b5563;
+}
+
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.main {
+    flex: 1;
+
+    padding: 30px 36px;
+
+    overflow-y: auto;
+}
+
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
+.topbar {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 28px;
+}
+
+.topbar h1 {
+    font-size: 25px;
+
+    font-weight: 650;
+
+    letter-spacing: -0.4px;
+}
+
+.topbar p {
+    margin-top: 5px;
+
+    color: var(--muted);
+
+    font-size: 13px;
+}
+
+
+/* PROTECTION STATUS */
+
+.protection-status {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 8px 12px;
+
+    border-radius: 20px;
+
+    background: rgba(34, 197, 94, 0.08);
+
+    border: 1px solid rgba(34, 197, 94, 0.18);
+
+    color: #4ade80;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.6px;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: var(--success);
+
+    box-shadow:
+        0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+
+/* =========================================================
+   SECURITY CARD
+   ========================================================= */
+
+.security-card {
+    background:
+        linear-gradient(
+            135deg,
+            #151d27,
+            #10161e
+        );
+
+    border: 1px solid var(--border);
+
+    border-radius: 14px;
+
+    padding: 25px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+    margin-bottom: 20px;
+}
+
+.security-icon {
+    width: 52px;
+    height: 52px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(34, 197, 94, 0.10);
+
+    border: 1px solid rgba(34, 197, 94, 0.2);
+
+    color: var(--success);
+
+    font-size: 24px;
+
+    box-shadow:
+        0 0 25px rgba(34, 197, 94, 0.08);
+}
+
+.security-info {
+    flex: 1;
+}
+
+.security-label {
+    color: var(--muted);
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    letter-spacing: 1px;
+}
+
+.security-info h2 {
+    margin-top: 4px;
+
+    font-size: 20px;
+
+    font-weight: 600;
+}
+
+.security-info p {
+    margin-top: 3px;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+
+/* SCAN BUTTON */
+
+.scan-button {
+    border: none;
+
+    background: var(--accent);
+
+    color: white;
+
+    padding: 12px 20px;
+
+    border-radius: 8px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.5px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        transform 0.15s ease;
+}
+
+.scan-button:hover {
+    background: var(--accent-hover);
+
+    transform: translateY(-1px);
+}
+
+.scan-button:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   STATISTICS
+   ========================================================= */
+
+.stats {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 14px;
+
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+
+    border-radius: 11px;
+
+    padding: 18px;
+}
+
+.stat-title {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+}
+
+.stat-value {
+    margin-top: 8px;
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.stat-value.threat {
+    color: var(--success);
+    margin-top: 8px;
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.stat-value.small {
+    font-size: 15px;
+    margin-top: 12px;
+}
+
+
+/* =========================================================
+   PANELS
+   ========================================================= */
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.panel-header p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+
+/* SCAN STATE */
+
+.scan-state {
+    color: #60a5fa;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+}
+
+
+/* =========================================================
+   SCAN AREA
+   ========================================================= */
+
+.scan-area {
+    padding: 35px;
+    text-align: center;
+}
+
+.scan-symbol {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.08);
+    color: #60a5fa;
+    font-size: 23px;
+}
+
+.scan-area h3 {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.scan-area p {
+    max-width: 480px;
+    margin: 7px auto 18px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+
+/* SECONDARY BUTTON */
+
+.secondary-button {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    padding: 9px 15px;
+    border-radius: 7px;
+    font-size: 11px;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.secondary-button:hover {
+    background: var(--surface-light);
+    border-color: #475569;
+}
+
+
+/* =========================================================
+  RESULTS
+   ========================================================= */
+
+.results-empty {
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+/* RESULTS CONTAINER */
+#results {
+    max-height: 350px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 18px 20px;
+}
+
+/* THREAT HEADER */
+.threat-header {
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* INDIVIDUAL THREAT */
+.threat {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    margin-bottom: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* THREAT INFORMATION */
+.threat div {
+    font-size: 13px;
+}
+
+.empty-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(34, 197, 94, 0.08);
+    color: var(--success);
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #26313d;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #344252;
+}
+
+/* scan results */

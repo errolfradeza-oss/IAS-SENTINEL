@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sentinel</title>
+
+    <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="brand">
+                <div class="brand-icon">S</div>
+
+                <div>
+                    <div class="brand-name">SENTINEL</div>
+                    <div class="brand-subtitle">Security Center</div>
+                </div>
+            </div>
+
+            <nav class="navigation">
+
+                <button class="nav-item active">
+                    <span>▣</span>
+                    Dashboard
+                </button>
+
+                <button class="nav-item">
+                    <span>⌕</span>
+                    Scan
+                </button>
+
+                <button class="nav-item">
+                    <span>▤</span>
+                    Quarantine
+                </button>
+
+                <button class="nav-item">
+                    <span>◷</span>
+                    History
+                </button>
+
+                <button class="nav-item">
+                    <span>⚙</span>
+                    Settings
+                </button>
+
+            </nav>
+
+            <div class="sidebar-footer">
+                Sentinel
+                <span>v1.0.0</span>
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+        <main class="main">
+
+            <!-- TOP BAR -->
+            <header class="topbar">
+
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Monitor your system's security status.</p>
+                </div>
+
+                <div class="protection-status">
+                    <span class="status-dot"></span>
+                    <span id="protectionStatus">PROTECTED</span>
+                </div>
+
+            </header>
+
+
+            <!-- SECURITY CARD -->
+            <section class="security-card">
+                <div class="security-icon" id="securityIcon">
+                    ✓
+                </div>
+
+                <div class="security-info">
+                    <span class="security-label">
+                        SYSTEM STATUS
+                    </span>
+
+                    <h2 id="securityTitle">
+                        System Secure
+                    </h2>
+
+                    <p id="securityDescription">
+                        No known threats have been detected.
+                    </p>
+                </div>
+
+                <button class="scan-button" id="scanButton">
+                    START SCAN
+                </button>
+            </section>
+
+
+            <!-- STATISTICS -->
+            <section class="stats">
+
+                <div class="stat-card">
+
+                    <div class="stat-title">
+                        FILES SCANNED
+                    </div>
+
+                    <div class="stat-value" id="filesScanned">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-title">
+                        THREATS FOUND
+                    </div>
+
+                    <div class="stat-value threat" id="threatsFound">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-title">
+                        LAST SCAN
+                    </div>
+
+                    <div class="stat-value small">
+                        Never
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- SCAN SECTION -->
+            <section class="panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>Scan</h3>
+
+                        <p>
+                            Select a folder to scan for known threats.
+                        </p>
+                    </div>
+
+                    <div class="scan-state" id="scanState">
+                        READY
+                    </div>
+
+                </div>
+
+
+                <div class="scan-area">
+
+                    <div class="scan-symbol">
+                        ⌕
+                    </div>
+
+                    <h3>Ready to scan</h3>
+
+                    <p>
+                        Sentinel will calculate file hashes and compare
+                        them against the local threat database.
+                    </p>
+
+                    <button
+                        class="secondary-button"
+                        id="selectFolderButton"
+                    >
+                        SELECT FOLDER
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <!-- RESULTS -->
+            <section class="panel results-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>Recent Results</h3>
+
+                        <p>
+                            Results from your latest scan.
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="results-empty" id="results">
+
+                    <div class="empty-icon">
+                        ✓
+                    </div>
+
+                    <span>
+                        No threats detected yet.
+                    </span>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script type="module" src="./main.js"></script>
+
+</body>
+</html>
