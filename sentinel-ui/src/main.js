@@ -14,6 +14,8 @@ const threatsFound = document.querySelector("#threatsFound");
 
 const scanState = document.querySelector("#scanState");
 const results = document.querySelector("#results");
+const scanProgressText = document.querySelector("#scanProgressText");
+const scanProgressBar = document.querySelector("#scanProgressBar");
 
 const protectionStatus = document.querySelector("#protectionStatus");
 const statusDot = document.querySelector(".status-dot");
@@ -21,6 +23,9 @@ const statusDot = document.querySelector(".status-dot");
 const securityIcon = document.querySelector("#securityIcon");
 const securityTitle = document.querySelector("#securityTitle");
 const securityDescription = document.querySelector("#securityDescription");
+
+const notificationsToggle = document.querySelector("#notificationsToggle");
+const scanSoundToggle = document.querySelector("#scanSoundToggle");
 
 let selectedFolder = null;
 let activeScanProgress = null;
@@ -41,11 +46,14 @@ function startScanProgress() {
     clearInterval(activeScanProgress);
 
     let current = 0;
+
     activeScanProgress = setInterval(() => {
         current += Math.random() * 12 + 8;
+
         if (current >= 92) {
             current = 92;
         }
+
         setScanProgress(current);
     }, 220);
 }
@@ -64,7 +72,9 @@ const SETTINGS_KEYS = {
 function loadSetting(key, defaultValue) {
     try {
         const stored = localStorage.getItem(key);
+
         if (stored === null) return defaultValue;
+
         return stored === "true";
     } catch (error) {
         console.warn("Unable to read setting:", error);
@@ -97,6 +107,7 @@ function playScanSound() {
     if (!scanSoundToggle || !scanSoundToggle.checked) return;
 
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+
     if (!AudioContextCtor) {
         console.warn("Audio context not available in this browser.");
         return;
@@ -149,13 +160,15 @@ function notifyScanComplete(result) {
     }
 
     if (Notification.permission === "default") {
-        Notification.requestPermission().then((permission) => {
-            if (permission === "granted") {
-                new Notification(title, { body });
-            }
-        }).catch((error) => {
-            console.warn("Unable to request notification permission:", error);
-        });
+        Notification.requestPermission()
+            .then((permission) => {
+                if (permission === "granted") {
+                    new Notification(title, { body });
+                }
+            })
+            .catch((error) => {
+                console.warn("Unable to request notification permission:", error);
+            });
     }
 }
 
@@ -167,6 +180,7 @@ function initSettings() {
 
     notificationsToggle.addEventListener("change", (event) => {
         saveSetting(SETTINGS_KEYS.notifications, event.target.checked);
+
         if (event.target.checked) {
             requestNotificationPermission();
         }
@@ -416,6 +430,8 @@ scanButton.addEventListener("click", async () => {
     }
 
     scanState.textContent = "SCANNING...";
+    setScanProgress(0);
+    startScanProgress();
 
     scanButton.disabled = true;
     selectFolderButton.disabled = true;
@@ -432,9 +448,9 @@ scanButton.addEventListener("click", async () => {
     try {
         const result = await scanFolder(selectedFolder);
 
-    if (!result) {
-        stopScanProgress(0);
-        scanState.textContent = "SCAN ERROR";
+        if (!result) {
+            stopScanProgress(0);
+            scanState.textContent = "SCAN ERROR";
 
             results.innerHTML = `
                 <div class="empty-icon">!</div>
@@ -471,41 +487,35 @@ scanButton.addEventListener("click", async () => {
             statusDot.classList.remove("scanning", "danger");
         }
 
-    if (result.threats_found === 0) {
+        if (result.threats_found === 0) {
+            results.innerHTML = `
+                <div class="empty-icon">✓</div>
+                <span>No known threats detected.</span>
+            `;
+        } else {
+            results.innerHTML = `
+                <div class="threat-header">
+                    🚨 ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
+                </div>
+                <div style="color: #fbbf24; font-size: 12px; margin-bottom: 14px; font-weight: 600;">
+                    ⚠ Threats have been logged to quarantine for review.
+                </div>
+                ${(Array.isArray(result.threats) ? result.threats : []).map((threat) => `
+                    <div class="threat">
+                        <div>File: ${escapeHtml(threat.file)}</div>
+                        <div>Detection: ${escapeHtml(threat.name)}</div>
+                        <div>Severity: ${escapeHtml(threat.severity)}</div>
+                        ${threat.log_error ? `<div style="color: #f87171; margin-top: 4px;">⚠ Log failed: ${escapeHtml(threat.log_error)}</div>` : ""}
+                    </div>
+                `).join("")}
+            `;
+        }
 
-        results.innerHTML = `
-            <div class="empty-icon">✓</div>
-            <span>No known threats detected.</span>
-            <span class="scan-summary">Scanned ${result.files_scanned} file${result.files_scanned !== 1 ? "s" : ""}</span>
-        `;
+        stopScanProgress(100);
+        scanState.textContent = "SCAN COMPLETE";
 
-    } else {
-      results.innerHTML = `
-          <div class="threat-header">
-               ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
-          </div>
-          <div class="scan-summary">
-              Scanned ${result.files_scanned} file${result.files_scanned !== 1 ? "s" : ""}
-          </div>
-          <div style="color: #fbbf24; font-size: 12px; margin-bottom: 14px; font-weight: 600;">
-              ⚠ Threats have been logged to quarantine for review.
-          </div>
-          ${result.threats.map(threat => `
-              <div class="threat">
-                  <div>File: ${threat.file}</div>
-                  <div>Detection: ${threat.name}</div>
-                  <div>Severity: ${threat.severity}</div>
-                  ${threat.log_error ? `<div style="color: #f87171; margin-top: 4px;">⚠ Log failed: ${threat.log_error}</div>` : ""}
-              </div>
-          `).join("")}
-      `;
-  }
-
-    stopScanProgress(100);
-    scanState.textContent = "SCAN COMPLETE";
-
-    notifyScanComplete(result);
-    playScanSound();
+        notifyScanComplete(result);
+        playScanSound();
 
         await loadQuarantine();
     } catch (error) {
@@ -533,6 +543,7 @@ const mainContent = document.querySelector("#mainContent");
 
 const dashboardPage = document.querySelector("#dashboardPage");
 const quarantinePage = document.querySelector("#quarantinePage");
+const settingsPage = document.querySelector("#settingsPage");
 
 // ============================================================
 // PAGE SWITCHING
@@ -555,6 +566,11 @@ function showQuarantine() {
     loadQuarantine();
 }
 
+function showSettings() {
+    hideAllPages();
+    settingsPage.classList.add("active");
+}
+
 function showScan() {
     showDashboard();
 
@@ -571,11 +587,6 @@ function showScan() {
 function showHistory() {
     // Placeholder for now
     console.log("History page not implemented yet.");
-}
-
-function showSettings() {
-    // Placeholder for now
-    console.log("Settings page not implemented yet.");
 }
 
 // Sidebar navigation
