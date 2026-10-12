@@ -31,7 +31,7 @@
                     Dashboard
                 </button>
 
-                <!-- <button class="nav-item" data-page="scan">
+                <!--<button class="nav-item" data-page="scan">
                     <span>⌕</span>
                     Scan
                 </button> -->
@@ -334,6 +334,99 @@
 
                 </section>
 
+            </section>
+
+            <section id="settingsPage" class="page settings-page">
+                <div class="settings-header">
+                    <div class="page-kicker">SYSTEM CONTROLS</div>
+                    <h1>Settings</h1>
+                    <p>Configure notifications, security behavior, and app preferences.</p>
+                </div>
+
+                <div class="settings-panel">
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <h3>Notifications</h3>
+                            <p>Enable or disable system notifications.</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input id="notificationsToggle" type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <h3>Scan Sound</h3>
+                            <p>Play a sound when scanning completes.</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input id="scanSoundToggle" type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <h3>Start with App</h3>
+                            <p>Launch Sentinel when the computer starts.</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row dropdown-row">
+                        <div class="setting-copy">
+                            <h3>Theme</h3>
+                            <p>Switch between dark and light mode.</p>
+                        </div>
+                        <div class="theme-select-wrap">
+                            <select aria-label="Theme">
+                                <option selected>Dark</option>
+                                <option>Light</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <h3>Clear Results Automatically</h3>
+                            <p>Reset the result panel when a new scan starts.</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <h3>Confirmation Before Quarantine</h3>
+                            <p>Ask before quarantining a detected threat.</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <h3>Show Scan Summary</h3>
+                            <p>Display summary details after each scan.</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="clear-history-button">Clear Scan History</button>
+                </div>
             </section>
 
         </main>
