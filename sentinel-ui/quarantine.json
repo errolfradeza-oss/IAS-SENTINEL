@@ -1,0 +1,22 @@
+[
+    {
+        "id": "a2a385de",
+        "original_path": "E:\\AntiMalware\\test_files\\test.txt",
+        "quarantine_path": "E:\\AntiMalware\\test_files\\test.txt",
+        "file_name": "test.txt",
+        "detection_name": "Test.Trojan",
+        "severity": "High",
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "date": "2026-08-27T03:08:04.055420"
+    },
+    {
+        "id": "d5a8b739",
+        "original_path": "E:\\AntiMalware\\test_files\\test.txt",
+        "quarantine_path": "E:\\AntiMalware\\test_files\\test.txt",
+        "file_name": "test.txt",
+        "detection_name": "Test.Trojan",
+        "severity": "High",
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "date": "2026-08-27T03:09:06.564986"
+    }
+]

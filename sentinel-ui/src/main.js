@@ -318,7 +318,7 @@ scanButton.addEventListener("click", async () => {
     } else {
       results.innerHTML = `
           <div class="threat-header">
-              🚨 ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
+               ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
           </div>
           <div style="color: #fbbf24; font-size: 12px; margin-bottom: 14px; font-weight: 600;">
               ⚠ Threats have been logged to quarantine for review.
