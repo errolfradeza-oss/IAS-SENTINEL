@@ -1,6 +1,6 @@
+
 const { open } = window.__TAURI__.dialog;
 const { Command } = window.__TAURI__.shell;
-
 
 // ============================================================
 // ELEMENTS
@@ -23,16 +23,172 @@ const securityTitle = document.querySelector("#securityTitle");
 const securityDescription = document.querySelector("#securityDescription");
 
 let selectedFolder = null;
+let activeScanProgress = null;
 
+function setScanProgress(percent) {
+    const clamped = Math.max(0, Math.min(100, percent));
+
+    if (scanProgressBar) {
+        scanProgressBar.style.width = `${clamped}%`;
+    }
+
+    if (scanProgressText) {
+        scanProgressText.textContent = `${Math.round(clamped)}%`;
+    }
+}
+
+function startScanProgress() {
+    clearInterval(activeScanProgress);
+
+    let current = 0;
+    activeScanProgress = setInterval(() => {
+        current += Math.random() * 12 + 8;
+        if (current >= 92) {
+            current = 92;
+        }
+        setScanProgress(current);
+    }, 220);
+}
+
+function stopScanProgress(finalPercent = 100) {
+    clearInterval(activeScanProgress);
+    activeScanProgress = null;
+    setScanProgress(finalPercent);
+}
+
+const SETTINGS_KEYS = {
+    notifications: "sentinel.notifications.enabled",
+    scanSound: "sentinel.scanSound.enabled"
+};
+
+function loadSetting(key, defaultValue) {
+    try {
+        const stored = localStorage.getItem(key);
+        if (stored === null) return defaultValue;
+        return stored === "true";
+    } catch (error) {
+        console.warn("Unable to read setting:", error);
+        return defaultValue;
+    }
+}
+
+function saveSetting(key, value) {
+    try {
+        localStorage.setItem(key, String(value));
+    } catch (error) {
+        console.warn("Unable to save setting:", error);
+    }
+}
+
+function requestNotificationPermission() {
+    if (!("Notification" in window)) {
+        console.warn("This browser does not support notifications.");
+        return;
+    }
+
+    if (Notification.permission === "default") {
+        Notification.requestPermission().catch((error) => {
+            console.warn("Notification permission request failed:", error);
+        });
+    }
+}
+
+function playScanSound() {
+    if (!scanSoundToggle || !scanSoundToggle.checked) return;
+
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) {
+        console.warn("Audio context not available in this browser.");
+        return;
+    }
+
+    try {
+        const audioContext = new AudioContextCtor();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = 880;
+        gainNode.gain.value = 0.08;
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.12);
+
+        setTimeout(() => {
+            if (audioContext.state !== "closed") {
+                audioContext.close().catch(() => {});
+            }
+        }, 200);
+    } catch (error) {
+        console.warn("Unable to play scan sound:", error);
+    }
+}
+
+function notifyScanComplete(result) {
+    if (!notificationsToggle || !notificationsToggle.checked) return;
+
+    if (!("Notification" in window)) {
+        console.warn("Notifications are not supported on this system.");
+        return;
+    }
+
+    const title = result && result.threats_found > 0
+        ? "Sentinel scan complete: threats detected"
+        : "Sentinel scan complete";
+
+    const body = result && result.threats_found > 0
+        ? `${result.threats_found} potential threat${result.threats_found !== 1 ? "s" : ""} were found.`
+        : "No known threats were detected.";
+
+    if (Notification.permission === "granted") {
+        new Notification(title, { body });
+        return;
+    }
+
+    if (Notification.permission === "default") {
+        Notification.requestPermission().then((permission) => {
+            if (permission === "granted") {
+                new Notification(title, { body });
+            }
+        }).catch((error) => {
+            console.warn("Unable to request notification permission:", error);
+        });
+    }
+}
+
+function initSettings() {
+    if (!notificationsToggle || !scanSoundToggle) return;
+
+    notificationsToggle.checked = loadSetting(SETTINGS_KEYS.notifications, true);
+    scanSoundToggle.checked = loadSetting(SETTINGS_KEYS.scanSound, true);
+
+    notificationsToggle.addEventListener("change", (event) => {
+        saveSetting(SETTINGS_KEYS.notifications, event.target.checked);
+        if (event.target.checked) {
+            requestNotificationPermission();
+        }
+    });
+
+    scanSoundToggle.addEventListener("change", (event) => {
+        saveSetting(SETTINGS_KEYS.scanSound, event.target.checked);
+    });
+
+    if (notificationsToggle.checked) {
+        requestNotificationPermission();
+    }
+}
+
+initSettings();
 
 // ============================================================
 // SELECT FOLDER
 // ============================================================
 
 selectFolderButton.addEventListener("click", async () => {
-
     try {
-
         const folder = await open({
             directory: true,
             multiple: false,
@@ -54,9 +210,7 @@ selectFolderButton.addEventListener("click", async () => {
             <div class="empty-icon">✓</div>
             <span>${folder}</span>
         `;
-
     } catch (error) {
-
         console.error("Folder selection failed:", error);
 
         scanState.textContent = "ERROR";
@@ -68,10 +222,10 @@ selectFolderButton.addEventListener("click", async () => {
     }
 });
 
-
 // ============================================================
 // PYTHON SCANNER
 // ============================================================
+
 async function scanFolder(folder) {
     console.log("=== SCANNER TEST ===");
     console.log("Selected folder:", folder);
@@ -100,7 +254,6 @@ async function scanFolder(folder) {
         console.log("Python completed successfully.");
 
         return JSON.parse(output.stdout);
-
     } catch (error) {
         console.error("=== SCANNER ERROR ===");
         console.error(error);
@@ -112,40 +265,38 @@ async function scanFolder(folder) {
 // QUARANTINE
 // ============================================================
 
-async function runPython(script, args) {
+async function runQuarantine(args) {
     try {
         const command = Command.create("python", [
-            script,
+            "quarantine.py",
             ...args
         ]);
+
         const output = await command.execute();
 
         if (output.code !== 0) {
-            console.error(script + " FAILED:", output.stderr);
+            console.error("QUARANTINE FAILED:", output.stderr);
             return null;
         }
 
         return JSON.parse(output.stdout);
-
     } catch (error) {
-        console.error(script + " ERROR:", error);
+        console.error("QUARANTINE ERROR:", error);
         return null;
     }
 }
 
-async function runQuarantine(args) {
-    return runPython("quarantine.py", args);
-}
-
 function escapeHtml(text) {
     const div = document.createElement("div");
-    div.textContent = text;
+    div.textContent = text ?? "";
     return div.innerHTML;
 }
 
 async function loadQuarantine() {
     const data = await runQuarantine(["list"]);
+
     if (data === null) return;
+
     renderQuarantine(Array.isArray(data) ? data : []);
 }
 
@@ -154,9 +305,11 @@ function renderQuarantine(items) {
     const countEl = document.querySelector("#quarantineCount");
     const empty = document.querySelector("#quarantineEmpty");
 
+    if (!list || !countEl) return;
+
     countEl.textContent = items.length;
 
-    list.querySelectorAll(".quarantine-item").forEach(el => el.remove());
+    list.querySelectorAll(".quarantine-item").forEach((el) => el.remove());
 
     if (items.length === 0) {
         if (empty) empty.style.display = "flex";
@@ -167,9 +320,10 @@ function renderQuarantine(items) {
 
     const frag = document.createDocumentFragment();
 
-    items.forEach(item => {
+    items.forEach((item) => {
         const div = document.createElement("div");
         div.className = "quarantine-item";
+
         div.innerHTML = `
             <div class="quarantine-file-icon">!</div>
             <div class="quarantine-file-info">
@@ -181,26 +335,27 @@ function renderQuarantine(items) {
                 <div class="detection-name">${escapeHtml(item.detection_name)}</div>
             </div>
             <div class="quarantine-severity">
-                <span class="severity-badge">${escapeHtml(item.severity.toUpperCase())}</span>
+                <span class="severity-badge">${escapeHtml(String(item.severity ?? "unknown").toUpperCase())}</span>
             </div>
             <div class="quarantine-actions">
-                <button class="quarantine-action restore-button" data-id="${item.id}">Restore</button>
-                <button class="quarantine-action delete-button" data-id="${item.id}">Delete</button>
+                <button class="quarantine-action restore-button" data-id="${escapeHtml(item.id)}">Restore</button>
+                <button class="quarantine-action delete-button" data-id="${escapeHtml(item.id)}">Delete</button>
             </div>
         `;
+
         frag.appendChild(div);
     });
 
     list.appendChild(frag);
 
-    list.querySelectorAll(".restore-button").forEach(btn => {
+    list.querySelectorAll(".restore-button").forEach((btn) => {
         btn.addEventListener("click", (e) => {
             e.stopPropagation();
             restoreFile(btn.dataset.id);
         });
     });
 
-    list.querySelectorAll(".delete-button").forEach(btn => {
+    list.querySelectorAll(".delete-button").forEach((btn) => {
         btn.addEventListener("click", (e) => {
             e.stopPropagation();
             deleteFile(btn.dataset.id);
@@ -210,7 +365,9 @@ function renderQuarantine(items) {
 
 async function restoreFile(id) {
     if (!confirm("Clear this threat from the quarantine log?")) return;
+
     const result = await runQuarantine(["restore", id]);
+
     if (result && result.success) {
         await loadQuarantine();
     } else {
@@ -220,7 +377,9 @@ async function restoreFile(id) {
 
 async function deleteFile(id) {
     if (!confirm("Remove this threat from the quarantine log?")) return;
+
     const result = await runQuarantine(["delete", id]);
+
     if (result && result.success) {
         await loadQuarantine();
     } else {
@@ -230,9 +389,13 @@ async function deleteFile(id) {
 
 async function deleteAllFiles() {
     const count = document.querySelector("#quarantineCount").textContent;
+
     if (count === "0") return;
+
     if (!confirm(`Clear all ${count} threats from the quarantine log?`)) return;
+
     const result = await runQuarantine(["delete-all"]);
+
     if (result && result.success) {
         await loadQuarantine();
     } else {
@@ -247,11 +410,8 @@ document.querySelector("#deleteAllQuarantine").addEventListener("click", deleteA
 // ============================================================
 
 scanButton.addEventListener("click", async () => {
-
     if (!selectedFolder) {
-
         alert("Please select a folder first.");
-
         return;
     }
 
@@ -269,48 +429,47 @@ scanButton.addEventListener("click", async () => {
         <span>Scanning...</span>
     `;
 
-    const result = await scanFolder(selectedFolder);
+    try {
+        const result = await scanFolder(selectedFolder);
 
     if (!result) {
-
+        stopScanProgress(0);
         scanState.textContent = "SCAN ERROR";
 
-        results.innerHTML = `
-            <div class="empty-icon">!</div>
-            <span>Scanner failed to run.</span>
-        `;
+            results.innerHTML = `
+                <div class="empty-icon">!</div>
+                <span>Scanner failed to run.</span>
+            `;
 
-        scanButton.disabled = false;
-        selectFolderButton.disabled = false;
+            return;
+        }
 
-        return;
-    }
+        console.log("Scanner result:", result);
 
-    console.log("Scanner result:", result);
+        filesScanned.textContent = result.files_scanned;
+        threatsFound.textContent = result.threats_found;
 
-    filesScanned.textContent = result.files_scanned;
-    threatsFound.textContent = result.threats_found;
+        // UPDATE PROTECTION STATUS
+        if (result.threats_found > 0) {
+            securityIcon.textContent = "!";
+            securityTitle.textContent = "Threats Detected";
+            securityDescription.textContent =
+                `${result.threats_found} potential threat${result.threats_found !== 1 ? "s" : ""} detected on the selected system.`;
+        } else {
+            securityIcon.textContent = "✓";
+            securityTitle.textContent = "System Secure";
+            securityDescription.textContent =
+                "No known threats have been detected.";
+        }
 
-    // UPDATE PROTECTION STATUS
-    if (result.threats_found > 0) {
-        securityIcon.textContent = "!";
-        securityTitle.textContent = "Threats Detected";
-        securityDescription.textContent =
-            `${result.threats_found} potential threat${result.threats_found !== 1 ? "s" : ""} detected on the selected system.`;
-    } else {
-        securityIcon.textContent = "✓";
-        securityTitle.textContent = "System Secure";
-        securityDescription.textContent =
-            "No known threats have been detected.";
-    }
-    if (result.threats_found > 0) {
-        protectionStatus.textContent = "THREAT DETECTED";
-        statusDot.classList.remove("scanning");
-        statusDot.classList.add("danger");
-    } else {
-        protectionStatus.textContent = "PROTECTED";
-        statusDot.classList.remove("scanning", "danger");
-    }
+        if (result.threats_found > 0) {
+            protectionStatus.textContent = "THREAT DETECTED";
+            statusDot.classList.remove("scanning");
+            statusDot.classList.add("danger");
+        } else {
+            protectionStatus.textContent = "PROTECTED";
+            statusDot.classList.remove("scanning", "danger");
+        }
 
     if (result.threats_found === 0) {
 
@@ -323,7 +482,7 @@ scanButton.addEventListener("click", async () => {
     } else {
       results.innerHTML = `
           <div class="threat-header">
-              🚨 ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
+               ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
           </div>
           <div class="scan-summary">
               Scanned ${result.files_scanned} file${result.files_scanned !== 1 ? "s" : ""}
@@ -342,12 +501,27 @@ scanButton.addEventListener("click", async () => {
       `;
   }
 
+    stopScanProgress(100);
     scanState.textContent = "SCAN COMPLETE";
 
-    scanButton.disabled = false;
-    selectFolderButton.disabled = false;
+    notifyScanComplete(result);
+    playScanSound();
 
-    await loadQuarantine();
+        await loadQuarantine();
+    } catch (error) {
+        console.error("Unexpected scan error:", error);
+
+        stopScanProgress(0);
+        scanState.textContent = "SCAN ERROR";
+
+        results.innerHTML = `
+            <div class="empty-icon">!</div>
+            <span>An unexpected error occurred during scanning.</span>
+        `;
+    } finally {
+        scanButton.disabled = false;
+        selectFolderButton.disabled = false;
+    }
 });
 
 // ============================================================
@@ -394,95 +568,9 @@ function showScan() {
     }
 }
 
-// ============================================================
-// HISTORY
-// ============================================================
-
-const historyList = document.querySelector("#historyList");
-
-function formatDate(iso) {
-    const d = new Date(iso);
-    return d.toLocaleString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
-}
-
-function renderHistory(events) {
-    const countEl = document.querySelector("#historyCount");
-    const empty = document.querySelector("#historyEmpty");
-
-    countEl.textContent = events.length;
-
-    historyList.querySelectorAll(".history-item").forEach(el => el.remove());
-
-    if (events.length === 0) {
-        if (empty) empty.style.display = "flex";
-        return;
-    }
-
-    if (empty) empty.style.display = "none";
-
-    const frag = document.createDocumentFragment();
-
-    events.forEach(event => {
-        const isRestore = event.action === "restored";
-
-        const div = document.createElement("div");
-        div.className = "history-item";
-        div.innerHTML = `
-            <div class="history-action-icon ${isRestore ? "restore" : "delete"}">
-                ${isRestore ? "↺" : "✕"}
-            </div>
-            <div class="quarantine-file-info">
-                <div class="quarantine-file-name">${escapeHtml(event.file_name)}</div>
-                <div class="quarantine-file-path">${escapeHtml(event.original_path)}</div>
-            </div>
-            <div class="quarantine-detection">
-                <div class="detection-label">DETECTION</div>
-                <div class="detection-name">${escapeHtml(event.detection_name)}</div>
-            </div>
-            <div class="quarantine-severity">
-                <span class="severity-badge">${escapeHtml(String(event.severity).toUpperCase())}</span>
-            </div>
-            <div class="history-action">
-                <span class="history-action-badge ${isRestore ? "restore" : "delete"}">${isRestore ? "RESTORED" : "DELETED"}</span>
-                <div class="history-date">${formatDate(event.date)}</div>
-            </div>
-        `;
-        frag.appendChild(div);
-    });
-
-    historyList.appendChild(frag);
-}
-
-async function loadHistory() {
-    const data = await runPython("history.py", ["list"]);
-    if (data === null) return;
-    renderHistory(Array.isArray(data) ? data : []);
-}
-
-async function clearHistory() {
-    const count = document.querySelector("#historyCount").textContent;
-    if (count === "0") return;
-    if (!confirm("Clear all history events?")) return;
-    const result = await runPython("history.py", ["clear"]);
-    if (result && result.success) {
-        await loadHistory();
-    } else {
-        alert("Failed: " + (result?.error || "Unknown error"));
-    }
-}
-
-document.querySelector("#clearHistoryButton").addEventListener("click", clearHistory);
-
 function showHistory() {
-    hideAllPages();
-    document.querySelector("#historyPage").classList.add("active");
-    loadHistory();
+    // Placeholder for now
+    console.log("History page not implemented yet.");
 }
 
 function showSettings() {
@@ -490,11 +578,9 @@ function showSettings() {
     console.log("Settings page not implemented yet.");
 }
 
-//sidebar navigation
+// Sidebar navigation
 navItems.forEach((item) => {
-
     item.addEventListener("click", () => {
-
         // Remove active state from every button
         navItems.forEach((nav) => {
             nav.classList.remove("active");
@@ -507,7 +593,6 @@ navItems.forEach((item) => {
 
         // Change main content
         switch (page) {
-
             case "dashboard":
                 showDashboard();
                 break;
@@ -528,7 +613,5 @@ navItems.forEach((item) => {
                 showSettings();
                 break;
         }
-
     });
-
 });
