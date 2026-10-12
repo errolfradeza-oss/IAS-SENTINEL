@@ -31,10 +31,10 @@
                     Dashboard
                 </button>
 
-                <!-- <button class="nav-item" data-page="scan">
+                <button class="nav-item" data-page="scan">
                     <span>⌕</span>
                     Scan
-                </button> -->
+                </button>
 
                 <button class="nav-item" data-page="quarantine">
                     <span>▤</span>
@@ -184,17 +184,6 @@
                             them against the local threat database.
                         </p>
 
-                        <div class="scan-progress" aria-live="polite">
-                            <div class="scan-progress-header">
-                                <span>Scan Progress</span>
-                                <span id="scanProgressText">0%</span>
-                            </div>
-
-                            <div class="scan-progress-bar">
-                                <span id="scanProgressBar"></span>
-                            </div>
-                        </div>
-
                         <button
                             class="secondary-button"
                             id="selectFolderButton"
@@ -326,6 +315,85 @@
 
                             <p>
                                 Sentinel hasn't isolated any files.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </section>
+
+            <section id="historyPage" class="page">
+
+                <!-- HISTORY HEADER -->
+                <header class="quarantine-header">
+                    <div>
+                        <div class="page-kicker">ACTIVITY LOG</div>
+                        <h1>History</h1>
+                        <p>
+                            Record of files restored or deleted from quarantine.
+                        </p>
+                    </div>
+
+                    <div class="quarantine-count">
+                        <span id="historyCount">0</span>
+                        <span>EVENTS</span>
+                    </div>
+                </header>
+
+
+                <!-- HISTORY LIST -->
+                <section class="quarantine-panel">
+
+                    <div class="quarantine-panel-header">
+
+                        <div>
+                            <h2>Activity</h2>
+
+                            <p>
+                                Every restore or delete action taken in quarantine.
+                            </p>
+                        </div>
+
+                        <button
+                            class="delete-all-button"
+                            id="clearHistoryButton"
+                        >
+                            CLEAR HISTORY
+                        </button>
+
+                    </div>
+
+
+                    <!-- EVENT LIST -->
+
+                    <div
+                        class="quarantine-list"
+                        id="historyList"
+                    >
+
+                        <!--
+                            JavaScript will insert history
+                            events here.
+                        -->
+
+                        <div
+                            class="quarantine-empty"
+                            id="historyEmpty"
+                        >
+
+                            <div class="quarantine-empty-icon">
+                                ◷
+                            </div>
+
+                            <h3>
+                                No history yet
+                            </h3>
+
+                            <p>
+                                Actions taken in quarantine will appear here.
                             </p>
 
                         </div>

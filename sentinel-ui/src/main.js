@@ -14,8 +14,6 @@ const threatsFound = document.querySelector("#threatsFound");
 
 const scanState = document.querySelector("#scanState");
 const results = document.querySelector("#results");
-const scanProgressText = document.querySelector("#scanProgressText");
-const scanProgressBar = document.querySelector("#scanProgressBar");
 
 const protectionStatus = document.querySelector("#protectionStatus");
 const statusDot = document.querySelector(".status-dot");
@@ -24,169 +22,8 @@ const securityIcon = document.querySelector("#securityIcon");
 const securityTitle = document.querySelector("#securityTitle");
 const securityDescription = document.querySelector("#securityDescription");
 
-const notificationsToggle = document.querySelector("#notificationsToggle");
-const scanSoundToggle = document.querySelector("#scanSoundToggle");
-
 let selectedFolder = null;
-let activeScanProgress = null;
 
-function setScanProgress(percent) {
-    const clamped = Math.max(0, Math.min(100, percent));
-
-    if (scanProgressBar) {
-        scanProgressBar.style.width = `${clamped}%`;
-    }
-
-    if (scanProgressText) {
-        scanProgressText.textContent = `${Math.round(clamped)}%`;
-    }
-}
-
-function startScanProgress() {
-    clearInterval(activeScanProgress);
-
-    let current = 0;
-    activeScanProgress = setInterval(() => {
-        current += Math.random() * 12 + 8;
-        if (current >= 92) {
-            current = 92;
-        }
-        setScanProgress(current);
-    }, 220);
-}
-
-function stopScanProgress(finalPercent = 100) {
-    clearInterval(activeScanProgress);
-    activeScanProgress = null;
-    setScanProgress(finalPercent);
-}
-
-const SETTINGS_KEYS = {
-    notifications: "sentinel.notifications.enabled",
-    scanSound: "sentinel.scanSound.enabled"
-};
-
-function loadSetting(key, defaultValue) {
-    try {
-        const stored = localStorage.getItem(key);
-        if (stored === null) return defaultValue;
-        return stored === "true";
-    } catch (error) {
-        console.warn("Unable to read setting:", error);
-        return defaultValue;
-    }
-}
-
-function saveSetting(key, value) {
-    try {
-        localStorage.setItem(key, String(value));
-    } catch (error) {
-        console.warn("Unable to save setting:", error);
-    }
-}
-
-function requestNotificationPermission() {
-    if (!("Notification" in window)) {
-        console.warn("This browser does not support notifications.");
-        return;
-    }
-
-    if (Notification.permission === "default") {
-        Notification.requestPermission().catch((error) => {
-            console.warn("Notification permission request failed:", error);
-        });
-    }
-}
-
-function playScanSound() {
-    if (!scanSoundToggle || !scanSoundToggle.checked) return;
-
-    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextCtor) {
-        console.warn("Audio context not available in this browser.");
-        return;
-    }
-
-    try {
-        const audioContext = new AudioContextCtor();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.type = "sine";
-        oscillator.frequency.value = 880;
-        gainNode.gain.value = 0.08;
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.12);
-
-        setTimeout(() => {
-            if (audioContext.state !== "closed") {
-                audioContext.close().catch(() => {});
-            }
-        }, 200);
-    } catch (error) {
-        console.warn("Unable to play scan sound:", error);
-    }
-}
-
-function notifyScanComplete(result) {
-    if (!notificationsToggle || !notificationsToggle.checked) return;
-
-    if (!("Notification" in window)) {
-        console.warn("Notifications are not supported on this system.");
-        return;
-    }
-
-    const title = result && result.threats_found > 0
-        ? "Sentinel scan complete: threats detected"
-        : "Sentinel scan complete";
-
-    const body = result && result.threats_found > 0
-        ? `${result.threats_found} potential threat${result.threats_found !== 1 ? "s" : ""} were found.`
-        : "No known threats were detected.";
-
-    if (Notification.permission === "granted") {
-        new Notification(title, { body });
-        return;
-    }
-
-    if (Notification.permission === "default") {
-        Notification.requestPermission().then((permission) => {
-            if (permission === "granted") {
-                new Notification(title, { body });
-            }
-        }).catch((error) => {
-            console.warn("Unable to request notification permission:", error);
-        });
-    }
-}
-
-function initSettings() {
-    if (!notificationsToggle || !scanSoundToggle) return;
-
-    notificationsToggle.checked = loadSetting(SETTINGS_KEYS.notifications, true);
-    scanSoundToggle.checked = loadSetting(SETTINGS_KEYS.scanSound, true);
-
-    notificationsToggle.addEventListener("change", (event) => {
-        saveSetting(SETTINGS_KEYS.notifications, event.target.checked);
-        if (event.target.checked) {
-            requestNotificationPermission();
-        }
-    });
-
-    scanSoundToggle.addEventListener("change", (event) => {
-        saveSetting(SETTINGS_KEYS.scanSound, event.target.checked);
-    });
-
-    if (notificationsToggle.checked) {
-        requestNotificationPermission();
-    }
-}
-
-initSettings();
 
 // ============================================================
 // SELECT FOLDER
@@ -419,8 +256,6 @@ scanButton.addEventListener("click", async () => {
     }
 
     scanState.textContent = "SCANNING...";
-    setScanProgress(0);
-    startScanProgress();
 
     scanButton.disabled = true;
     selectFolderButton.disabled = true;
@@ -437,7 +272,7 @@ scanButton.addEventListener("click", async () => {
     const result = await scanFolder(selectedFolder);
 
     if (!result) {
-        stopScanProgress(0);
+
         scanState.textContent = "SCAN ERROR";
 
         results.innerHTML = `
@@ -488,7 +323,7 @@ scanButton.addEventListener("click", async () => {
     } else {
       results.innerHTML = `
           <div class="threat-header">
-               ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
+              🚨 ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
           </div>
           <div class="scan-summary">
               Scanned ${result.files_scanned} file${result.files_scanned !== 1 ? "s" : ""}
@@ -507,11 +342,7 @@ scanButton.addEventListener("click", async () => {
       `;
   }
 
-    stopScanProgress(100);
     scanState.textContent = "SCAN COMPLETE";
-
-    notifyScanComplete(result);
-    playScanSound();
 
     scanButton.disabled = false;
     selectFolderButton.disabled = false;
@@ -528,7 +359,6 @@ const mainContent = document.querySelector("#mainContent");
 
 const dashboardPage = document.querySelector("#dashboardPage");
 const quarantinePage = document.querySelector("#quarantinePage");
-const settingsPage = document.querySelector("#settingsPage");
 
 // ============================================================
 // PAGE SWITCHING
@@ -549,11 +379,6 @@ function showQuarantine() {
     hideAllPages();
     quarantinePage.classList.add("active");
     loadQuarantine();
-}
-
-function showSettings() {
-    hideAllPages();
-    settingsPage.classList.add("active");
 }
 
 function showScan() {
@@ -658,6 +483,11 @@ function showHistory() {
     hideAllPages();
     document.querySelector("#historyPage").classList.add("active");
     loadHistory();
+}
+
+function showSettings() {
+    // Placeholder for now
+    console.log("Settings page not implemented yet.");
 }
 
 //sidebar navigation
