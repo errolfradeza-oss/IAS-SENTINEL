@@ -112,25 +112,29 @@ async function scanFolder(folder) {
 // QUARANTINE
 // ============================================================
 
-async function runQuarantine(args) {
+async function runPython(script, args) {
     try {
         const command = Command.create("python", [
-            "quarantine.py",
+            script,
             ...args
         ]);
         const output = await command.execute();
 
         if (output.code !== 0) {
-            console.error("QUARANTINE FAILED:", output.stderr);
+            console.error(script + " FAILED:", output.stderr);
             return null;
         }
 
         return JSON.parse(output.stdout);
 
     } catch (error) {
-        console.error("QUARANTINE ERROR:", error);
+        console.error(script + " ERROR:", error);
         return null;
     }
+}
+
+async function runQuarantine(args) {
+    return runPython("quarantine.py", args);
 }
 
 function escapeHtml(text) {
@@ -313,12 +317,16 @@ scanButton.addEventListener("click", async () => {
         results.innerHTML = `
             <div class="empty-icon">✓</div>
             <span>No known threats detected.</span>
+            <span class="scan-summary">Scanned ${result.files_scanned} file${result.files_scanned !== 1 ? "s" : ""}</span>
         `;
 
     } else {
       results.innerHTML = `
           <div class="threat-header">
                ${result.threats_found} THREAT${result.threats_found !== 1 ? "S" : ""} DETECTED
+          </div>
+          <div class="scan-summary">
+              Scanned ${result.files_scanned} file${result.files_scanned !== 1 ? "s" : ""}
           </div>
           <div style="color: #fbbf24; font-size: 12px; margin-bottom: 14px; font-weight: 600;">
               ⚠ Threats have been logged to quarantine for review.
@@ -386,9 +394,95 @@ function showScan() {
     }
 }
 
+// ============================================================
+// HISTORY
+// ============================================================
+
+const historyList = document.querySelector("#historyList");
+
+function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function renderHistory(events) {
+    const countEl = document.querySelector("#historyCount");
+    const empty = document.querySelector("#historyEmpty");
+
+    countEl.textContent = events.length;
+
+    historyList.querySelectorAll(".history-item").forEach(el => el.remove());
+
+    if (events.length === 0) {
+        if (empty) empty.style.display = "flex";
+        return;
+    }
+
+    if (empty) empty.style.display = "none";
+
+    const frag = document.createDocumentFragment();
+
+    events.forEach(event => {
+        const isRestore = event.action === "restored";
+
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.innerHTML = `
+            <div class="history-action-icon ${isRestore ? "restore" : "delete"}">
+                ${isRestore ? "↺" : "✕"}
+            </div>
+            <div class="quarantine-file-info">
+                <div class="quarantine-file-name">${escapeHtml(event.file_name)}</div>
+                <div class="quarantine-file-path">${escapeHtml(event.original_path)}</div>
+            </div>
+            <div class="quarantine-detection">
+                <div class="detection-label">DETECTION</div>
+                <div class="detection-name">${escapeHtml(event.detection_name)}</div>
+            </div>
+            <div class="quarantine-severity">
+                <span class="severity-badge">${escapeHtml(String(event.severity).toUpperCase())}</span>
+            </div>
+            <div class="history-action">
+                <span class="history-action-badge ${isRestore ? "restore" : "delete"}">${isRestore ? "RESTORED" : "DELETED"}</span>
+                <div class="history-date">${formatDate(event.date)}</div>
+            </div>
+        `;
+        frag.appendChild(div);
+    });
+
+    historyList.appendChild(frag);
+}
+
+async function loadHistory() {
+    const data = await runPython("history.py", ["list"]);
+    if (data === null) return;
+    renderHistory(Array.isArray(data) ? data : []);
+}
+
+async function clearHistory() {
+    const count = document.querySelector("#historyCount").textContent;
+    if (count === "0") return;
+    if (!confirm("Clear all history events?")) return;
+    const result = await runPython("history.py", ["clear"]);
+    if (result && result.success) {
+        await loadHistory();
+    } else {
+        alert("Failed: " + (result?.error || "Unknown error"));
+    }
+}
+
+document.querySelector("#clearHistoryButton").addEventListener("click", clearHistory);
+
 function showHistory() {
-    // Placeholder for now
-    console.log("History page not implemented yet.");
+    hideAllPages();
+    document.querySelector("#historyPage").classList.add("active");
+    loadHistory();
 }
 
 function showSettings() {

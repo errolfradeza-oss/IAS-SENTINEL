@@ -4,11 +4,10 @@ import uuid
 import sys
 from datetime import datetime
 
+import history
 
-BASE_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..")
-)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 QUARANTINE_DB = os.path.join(BASE_DIR, "quarantine.json")
 
 
@@ -25,6 +24,19 @@ def load_db():
 def save_db(db):
     with open(QUARANTINE_DB, "w", encoding="utf-8") as f:
         json.dump(db, f, indent=4)
+
+
+def record_history(action, entry):
+    try:
+        history.add_event(
+            action,
+            entry.get("file_name", "Unknown"),
+            entry.get("detection_name", "Unknown"),
+            entry.get("severity", "Unknown"),
+            entry.get("original_path", "")
+        )
+    except Exception:
+        pass
 
 
 def log_threat(file_path, detection):
@@ -55,6 +67,7 @@ def restore_file(qid):
         if entry["id"] == qid:
             db.pop(i)
             save_db(db)
+            record_history("restored", entry)
             return {"success": True, "message": "Cleared from quarantine log"}
     return {"success": False, "error": "Not found in quarantine log"}
 
@@ -65,12 +78,16 @@ def delete_file(qid):
         if entry["id"] == qid:
             db.pop(i)
             save_db(db)
+            record_history("deleted", entry)
             return {"success": True, "message": "Removed from quarantine log"}
     return {"success": False, "error": "Not found in quarantine log"}
 
 
 def delete_all():
-    count = len(load_db())
+    db = load_db()
+    for entry in db:
+        record_history("deleted", entry)
+    count = len(db)
     save_db([])
     return {"success": True, "deleted": count, "errors": []}
 

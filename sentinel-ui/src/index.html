@@ -325,6 +325,85 @@
 
             </section>
 
+            <section id="historyPage" class="page">
+
+                <!-- HISTORY HEADER -->
+                <header class="quarantine-header">
+                    <div>
+                        <div class="page-kicker">ACTIVITY LOG</div>
+                        <h1>History</h1>
+                        <p>
+                            Record of files restored or deleted from quarantine.
+                        </p>
+                    </div>
+
+                    <div class="quarantine-count">
+                        <span id="historyCount">0</span>
+                        <span>EVENTS</span>
+                    </div>
+                </header>
+
+
+                <!-- HISTORY LIST -->
+                <section class="quarantine-panel">
+
+                    <div class="quarantine-panel-header">
+
+                        <div>
+                            <h2>Activity</h2>
+
+                            <p>
+                                Every restore or delete action taken in quarantine.
+                            </p>
+                        </div>
+
+                        <button
+                            class="delete-all-button"
+                            id="clearHistoryButton"
+                        >
+                            CLEAR HISTORY
+                        </button>
+
+                    </div>
+
+
+                    <!-- EVENT LIST -->
+
+                    <div
+                        class="quarantine-list"
+                        id="historyList"
+                    >
+
+                        <!--
+                            JavaScript will insert history
+                            events here.
+                        -->
+
+                        <div
+                            class="quarantine-empty"
+                            id="historyEmpty"
+                        >
+
+                            <div class="quarantine-empty-icon">
+                                ◷
+                            </div>
+
+                            <h3>
+                                No history yet
+                            </h3>
+
+                            <p>
+                                Actions taken in quarantine will appear here.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </section>
+
         </main>
 
 
