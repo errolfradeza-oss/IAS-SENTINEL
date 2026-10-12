@@ -8,7 +8,13 @@ import history
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-QUARANTINE_DB = os.path.join(BASE_DIR, "quarantine.json")
+
+# Data lives outside the project folder so dev-server file watching
+# doesn't reload the app every time the DB is written.
+DATA_DIR = os.path.join(os.path.expanduser("~"), ".sentinel")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+QUARANTINE_DB = os.path.join(DATA_DIR, "quarantine.json")
 
 
 def load_db():
