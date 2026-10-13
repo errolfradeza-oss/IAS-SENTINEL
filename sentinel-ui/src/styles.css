@@ -781,8 +781,8 @@ body {
 }
 
 .toggle-switch input:checked + .slider {
-    background: #22c55e;
-    border-color: rgba(34, 197, 94, 0.7);
+    background: #3472d5;
+    border-color: rgba(21, 47, 175, 0.7);
 }
 
 .toggle-switch input:checked + .slider::before {
@@ -1284,4 +1284,784 @@ body {
     color: var(--muted);
 
     font-size: 11px;
+}
+
+/* light mode/dark mode */
+
+/* LIGHT THEME */
+html[data-theme="light"] body {
+    background: #f3f6fb;
+    color: #172033;
+}
+
+html[data-theme="light"] .app,
+html[data-theme="light"] .main,
+html[data-theme="light"] .page {
+    background: #f3f6fb;
+    color: #172033;
+}
+
+html[data-theme="light"] .sidebar {
+    background: #ffffff;
+    color: #172033;
+    border-right: 1px solid #e2e8f0;
+}
+
+html[data-theme="light"] .brand-name,
+html[data-theme="light"] .navigation,
+html[data-theme="light"] .nav-item,
+html[data-theme="light"] .topbar h1,
+html[data-theme="light"] .security-info h2,
+html[data-theme="light"] .panel h3,
+html[data-theme="light"] .quarantine-header h1,
+html[data-theme="light"] .quarantine-panel h2,
+html[data-theme="light"] .settings-header h1,
+html[data-theme="light"] .setting-copy h3 {
+    color: #172033;
+}
+
+html[data-theme="light"] .nav-item {
+    background: transparent;
+}
+
+html[data-theme="light"] .nav-item.active {
+    background: #e8efff;
+    color: #2457c5;
+}
+
+html[data-theme="light"] .security-card,
+html[data-theme="light"] .panel,
+html[data-theme="light"] .stat-card,
+html[data-theme="light"] .quarantine-panel,
+html[data-theme="light"] .settings-panel {
+    background: #ffffff;
+    color: #172033;
+    border-color: #e2e8f0;
+}
+
+html[data-theme="light"] p,
+html[data-theme="light"] .stat-title,
+html[data-theme="light"] .setting-copy p,
+html[data-theme="light"] .sidebar-footer {
+    color: #64748b;
+}
+
+html[data-theme="light"] .quarantine-warning {
+    background: #fff7ed;
+    color: #9a3412;
+    border-color: #fed7aa;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+    background: #ffffff;
+    color: #172033;
+    border-color: #cbd5e1;
+}
+
+html[data-theme="light"] .setting-row {
+    border-color: #e2e8f0;
+}
+
+/*transition ng theme change*/
+
+/* Radial theme transition */
+::view-transition-group(root) {
+    animation-duration: 750ms;
+}
+
+::view-transition-old(root) {
+    animation: none;
+    z-index: 1;
+}
+
+::view-transition-new(root) {
+    animation: none;
+    z-index: 2;
+}
+
+/* Keep the transition smooth */
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(root) {
+        animation-duration: 0ms;
+    }
+}
+
+/* theme change control */
+/* Dark theme */
+:root {
+    --scan-text-color: #ffffff;
+    --scan-percent-color: #60a5fa;
+}
+
+/* Light theme */
+html[data-theme="light"] {
+    --scan-text-color: #172033;
+    --scan-percent-color: #2563eb;
+}
+
+/* Scan progress labels */
+.scan-progress-header,
+.scan-progress-header span {
+    color: var(--scan-text-color);
+}
+
+/* Scan percentage */
+#scanProgressText {
+    color: var(--scan-percent-color);
+    transition: color 0.3s ease;
+}
+
+
+
+/* ============================================================
+   SENTINEL DASHBOARD REDESIGN
+   ============================================================ */
+
+.live-security-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 150px;
+    padding: 28px;
+    gap: 22px;
+    background: linear-gradient(115deg, #151e2a, #10151d 75%);
+    border: 1px solid #263445;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+    transition: border-color 0.35s ease, background 0.35s ease;
+}
+
+.live-security-card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    width: 360px;
+    height: 360px;
+    right: -95px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        var(--security-glow, rgba(148, 163, 184, 0.12)) 0%,
+        transparent 70%
+    );
+    transition: background 0.4s ease;
+}
+
+.live-security-card[data-status="unknown"] {
+    --security-glow: rgba(148, 163, 184, 0.16);
+}
+
+.live-security-card[data-status="scanning"] {
+    --security-glow: rgba(234, 179, 8, 0.25);
+    border-color: rgba(234, 179, 8, 0.35);
+}
+
+.live-security-card[data-status="clean"] {
+    --security-glow: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.live-security-card[data-status="threat"] {
+    --security-glow: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.live-security-card[data-status="error"] {
+    --security-glow: rgba(249, 115, 22, 0.24);
+    border-color: rgba(249, 115, 22, 0.35);
+}
+
+.security-icon {
+    width: 62px;
+    height: 62px;
+    font-size: 27px;
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 0 25px var(--security-glow);
+    transition: color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.live-security-card[data-status="unknown"] .security-icon {
+    color: #94a3b8;
+}
+
+.live-security-card[data-status="scanning"] .security-icon {
+    color: #facc15;
+    box-shadow: 0 0 28px rgba(234, 179, 8, 0.35);
+}
+
+.live-security-card[data-status="clean"] .security-icon {
+    color: #4ade80;
+    box-shadow: 0 0 28px rgba(34, 197, 94, 0.3);
+}
+
+.live-security-card[data-status="threat"] .security-icon {
+    color: #f87171;
+    box-shadow: 0 0 28px rgba(239, 68, 68, 0.4);
+}
+
+.live-security-card[data-status="error"] .security-icon {
+    color: #fb923c;
+}
+
+.security-info h2 {
+    font-size: 22px;
+    letter-spacing: -0.5px;
+}
+
+.security-info p {
+    max-width: 450px;
+    line-height: 1.6;
+}
+
+.protection-status {
+    background: rgba(148, 163, 184, 0.07);
+    border-color: rgba(148, 163, 184, 0.18);
+    color: #94a3b8;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.protection-status .status-dot {
+    background: #94a3b8;
+    box-shadow: 0 0 8px rgba(148, 163, 184, 0.4);
+}
+
+.protection-status[data-status="scanning"] {
+    color: #facc15;
+    background: rgba(234, 179, 8, 0.08);
+    border-color: rgba(234, 179, 8, 0.2);
+}
+
+.protection-status[data-status="scanning"] .status-dot {
+    background: #facc15;
+    box-shadow: 0 0 9px rgba(234, 179, 8, 0.6);
+    animation: sentinel-pulse 1.1s ease-in-out infinite;
+}
+
+.protection-status[data-status="clean"] {
+    color: #4ade80;
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+.protection-status[data-status="clean"] .status-dot {
+    background: #22c55e;
+    box-shadow: 0 0 9px rgba(34, 197, 94, 0.6);
+}
+
+.protection-status[data-status="threat"] {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.protection-status[data-status="threat"] .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 9px rgba(239, 68, 68, 0.6);
+}
+
+.protection-status[data-status="error"] {
+    color: #fb923c;
+    background: rgba(249, 115, 22, 0.08);
+    border-color: rgba(249, 115, 22, 0.25);
+}
+
+.protection-status[data-status="error"] .status-dot {
+    background: #f97316;
+    box-shadow: 0 0 9px rgba(249, 115, 22, 0.5);
+}
+
+.stats {
+    gap: 16px;
+}
+
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    padding: 22px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, var(--surface-light), var(--surface));
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    border-color: #344457;
+}
+
+.stat-value {
+    font-size: 28px;
+    letter-spacing: -0.7px;
+}
+
+.stat-value.threat {
+    color: var(--success);
+}
+
+.panel {
+    border-radius: 13px;
+}
+
+.panel-header {
+    padding: 20px 22px;
+}
+
+.scan-area {
+    padding: 38px 30px;
+}
+
+.scan-progress-bar {
+    height: 10px;
+}
+
+.scan-button:disabled,
+.secondary-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+html[data-theme="light"] .live-security-card {
+    background: linear-gradient(115deg, #ffffff, #f6f9ff 75%);
+    border-color: #dbe5f1;
+}
+
+html[data-theme="light"] .stat-card {
+    background: linear-gradient(145deg, #ffffff, #f8faff);
+}
+
+html[data-theme="light"] .stat-card:hover {
+    border-color: #b8c9df;
+}
+
+html[data-theme="light"] .protection-status[data-status="unknown"] {
+    color: #64748b;
+}
+
+@keyframes sentinel-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+@media (max-width: 800px) {
+    body {
+        overflow: auto;
+    }
+
+    .app {
+        min-height: 100vh;
+        height: auto;
+    }
+
+    .sidebar {
+        width: 180px;
+        flex-shrink: 0;
+    }
+
+    .main {
+        min-width: 0;
+        padding: 22px 18px;
+    }
+
+    .live-security-card {
+        flex-wrap: wrap;
+    }
+
+    .live-security-card .scan-button {
+        width: 100%;
+    }
+
+    .stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .live-security-card,
+    .security-icon,
+    .protection-status,
+    .stat-card {
+        transition: none;
+    }
+
+    .protection-status[data-status="scanning"] .status-dot {
+        animation: none;
+    }
+}
+
+/* ============================================================
+   CIRCULAR SCANNER
+   ============================================================ */
+
+@property --progress {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+
+.scan-ring-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 28px 16px;
+}
+
+.scan-ring {
+    --progress: 0;
+    --ring-color: #64748b;
+
+    width: 190px;
+    height: 190px;
+    flex-shrink: 0;
+
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    position: relative;
+
+    background: conic-gradient(
+        from -90deg,
+        var(--ring-color) calc(var(--progress) * 1%),
+        rgba(148, 163, 184, 0.15) 0
+    );
+
+    box-shadow: 0 0 20px
+        color-mix(in srgb, var(--ring-color) 18%, transparent);
+
+    transition:
+        --progress 0.25s linear,
+        box-shadow 0.3s ease,
+        background 0.3s ease;
+
+    will-change: --progress;
+}
+
+/* Inner circle */
+
+.scan-ring::before {
+    content: "";
+    position: absolute;
+    inset: 9px;
+
+    border-radius: 50%;
+
+    background: var(--card-bg, #101827);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.scan-ring-inner {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Percentage */
+
+#scanPercent {
+    color: var(--scan-percent-color, var(--ring-color));
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* READY / SCANNING / COMPLETE / ERROR */
+
+#scanLabel {
+    color: var(--scan-text-color, var(--text));
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    opacity: 0.7;
+}
+
+#scanHeading {
+    font-size: 20px;
+    font-weight: 750;
+    margin: 4px 0 0;
+}
+
+#scanSubtext {
+    font-size: 13px;
+    opacity: 0.7;
+    margin: 0;
+    max-width: 300px;
+    line-height: 1.6;
+}
+
+/* ============================================================
+   RING COLORS BY PROTECTION STATUS
+   ============================================================ */
+
+/* Waiting for scan */
+
+.live-security-card[data-status="unknown"] .scan-ring {
+    --ring-color: #64748b;
+}
+
+/* Currently scanning */
+
+.live-security-card[data-status="scanning"] .scan-ring {
+    --ring-color: #38bdf8;
+}
+
+/* No threats detected */
+
+.live-security-card[data-status="clean"] .scan-ring {
+    --ring-color: #22c55e;
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+}
+
+/* Threats detected */
+
+.live-security-card[data-status="threat"] .scan-ring {
+    --ring-color: #ef4444;
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.22);
+}
+
+/* Scanner error */
+
+.live-security-card[data-status="error"] .scan-ring {
+    --ring-color: #f97316;
+    box-shadow: 0 0 30px rgba(249, 115, 22, 0.2);
+}
+
+/* Slight threats, if your JavaScript uses this status */
+
+.live-security-card[data-status="slight"] .scan-ring {
+    --ring-color: #facc15;
+    box-shadow: 0 0 30px rgba(250, 204, 21, 0.2);
+}
+
+/* ============================================================
+   SCANNING ANIMATION
+   ============================================================ */
+
+.scan-ring.is-scanning {
+    animation: scan-ring-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes scan-ring-pulse {
+    0%, 100% {
+        box-shadow: 0 0 12px
+            color-mix(in srgb, var(--ring-color) 20%, transparent);
+    }
+
+    50% {
+        box-shadow: 0 0 30px
+            color-mix(in srgb, var(--ring-color) 55%, transparent);
+    }
+}
+
+/* ============================================================
+   LIGHT THEME
+   ============================================================ */
+
+html[data-theme="light"] .scan-ring::before {
+    background: var(--card-bg, #ffffff);
+    border-color: rgba(100, 116, 139, 0.2);
+}
+
+html[data-theme="light"] {
+    --scan-text-color: #172033;
+    --scan-percent-color: #2563eb;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 480px) {
+    .scan-ring {
+        width: 160px;
+        height: 160px;
+    }
+
+    #scanPercent {
+        font-size: 32px;
+    }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .scan-ring {
+        transition: none;
+    }
+
+    .scan-ring.is-scanning {
+        animation: none;
+    }
+}
+
+/* ============================================================
+   RADIAL THEME TRANSITION
+   ============================================================ */
+
+::view-transition-group(root) {
+    animation-duration: 750ms;
+    animation-timing-function: ease-in-out;
+}
+
+::view-transition-old(root) {
+    animation: none;
+    z-index: 1;
+}
+
+::view-transition-new(root) {
+    animation: reveal-theme 750ms ease-in-out;
+    z-index: 2;
+}
+
+@keyframes reveal-theme {
+    from {
+        clip-path: circle(0% at var(--theme-x, 50%) var(--theme-y, 50%));
+    }
+
+    to {
+        clip-path: circle(150% at var(--theme-x, 50%) var(--theme-y, 50%));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(root) {
+        animation-duration: 0ms;
+    }
+
+    ::view-transition-new(root) {
+        animation: none;
+    }
+}
+
+/* Center the scanner panel contents */
+.scan-ring-panel {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* Center the circular progress ring */
+#scanRing {
+    position: relative;
+    z-index: 2;
+}
+
+#scanRing.scan-ring {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin: 0 auto 24px !important;
+    position: relative;
+    left: auto;
+    right: auto;
+}
+
+/* Keep the percentage and label centered inside the ring */
+.scan-ring-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Center the heading and description */
+#scanHeading,
+#scanSubtext {
+    width: 100%;
+    text-align: center;
+}
+
+/* Center the scan button inside the security card */
+#scanButton {
+    display: block;
+    align-self: center;
+    margin: 22px auto 0 !important;
+}
+
+/* pulse effect */
+/* SENTINEL CIRCULAR FLOWING AURA */
+
+#scanRippleWrap {
+    position: relative !important;
+    isolation: isolate;
+    overflow: visible !important;
+    aspect-ratio: 1 / 1;
+}
+
+#scanRippleWrap .scan-ripple {
+    position: absolute !important;
+    width: 100% !important;
+    height: 100% !important;
+    inset: 0 !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1;
+    background: var(--ring-color, #38bdf8) !important;
+    filter: blur(18px);
+    opacity: 0;
+    transform: scale(0.85);
+    transform-origin: center;
+    pointer-events: none !important;
+    z-index: 1;
+    animation: none;
+}
+
+#scanRippleWrap.is-scanning .scan-ripple-one {
+    animation: sentinelAura 3s ease-out infinite !important;
+}
+
+#scanRippleWrap.is-scanning .scan-ripple-two {
+    animation: sentinelAura 3s ease-out infinite 1s !important;
+}
+
+#scanRippleWrap.is-scanning .scan-ripple-three {
+    animation: sentinelAura 3s ease-out infinite 2s !important;
+}
+
+#scanRing {
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes sentinelAura {
+    0% {
+        transform: scale(0.85);
+        opacity: 0;
+        filter: blur(12px);
+    }
+
+    25% {
+        transform: scale(1.08);
+        opacity: 0.3;
+        filter: blur(18px);
+    }
+
+    60% {
+        transform: scale(1.3);
+        opacity: 0.18;
+        filter: blur(24px);
+    }
+
+    100% {
+        transform: scale(1.55);
+        opacity: 0;
+        filter: blur(30px);
+    }
 }

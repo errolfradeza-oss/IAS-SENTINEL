@@ -3,22 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Sentinel</title>
-
     <link rel="stylesheet" href="./styles.css">
 </head>
 
 <body>
-
     <div class="app">
 
         <!-- SIDEBAR -->
         <aside class="sidebar">
-
             <div class="brand">
                 <div class="brand-icon">S</div>
-
                 <div>
                     <div class="brand-name">SENTINEL</div>
                     <div class="brand-subtitle">Security Center</div>
@@ -30,11 +25,6 @@
                     <span>▣</span>
                     Dashboard
                 </button>
-
-                <!-- <button class="nav-item" data-page="scan">
-                    <span>⌕</span>
-                    Scan
-                </button> -->
 
                 <button class="nav-item" data-page="quarantine">
                     <span>▤</span>
@@ -50,132 +40,102 @@
                     <span>⚙</span>
                     Settings
                 </button>
-
             </nav>
 
             <div class="sidebar-footer">
                 Sentinel
                 <span>v1.0.0</span>
             </div>
-
         </aside>
-
 
         <!-- MAIN CONTENT -->
         <main class="main" id="mainContent">
 
+            <!-- DASHBOARD -->
             <section id="dashboardPage" class="page active">
-                <!-- TOP BAR -->
-                <header class="topbar">
 
+                <header class="topbar">
                     <div>
                         <h1>Dashboard</h1>
                         <p>Monitor your system's security status.</p>
                     </div>
 
-                    <div class="protection-status">
+                    <div class="protection-status" data-status="unknown">
                         <span class="status-dot"></span>
-                        <span id="protectionStatus">PROTECTED</span>
+                        <span id="protectionStatus">STATUS UNKNOWN</span>
                     </div>
-
                 </header>
 
-
                 <!-- SECURITY CARD -->
-                <section class="security-card">
-                    <div class="security-icon" id="securityIcon">
-                        ✓
+                <section class="security-card live-security-card" data-status="unknown">
+
+                <div class="scan-ring-panel">
+                    <div class="scan-ripple-wrap" id="scanRippleWrap">
+                        <div class="scan-ripple scan-ripple-one"></div>
+                        <div class="scan-ripple scan-ripple-two"></div>
+                        <div class="scan-ripple scan-ripple-three"></div>
+
+                        <div class="scan-ring" id="scanRing" style="--progress: 0">
+                            <div class="scan-ring-inner">
+                                <span id="scanPercent">0%</span>
+                                <small id="scanLabel">READY</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="security-info">
-                        <span class="security-label">
-                            SYSTEM STATUS
-                        </span>
+                    <h2 id="scanHeading">Sentinel Protection</h2>
+                    <p id="scanSubtext">Ready to scan your files</p>
+                </div>
 
-                        <h2 id="securityTitle">
-                            System Secure
-                        </h2>
+
+                    <!--<div class="security-icon" id="securityIcon">✓</div>
+
+                    <div class="security-info">
+                        <span class="security-label">SYSTEM STATUS</span>
+
+                        <h2 id="securityTitle">System Secure</h2>
 
                         <p id="securityDescription">
                             No known threats have been detected.
                         </p>
-                    </div>
+                    </div> -->
 
                     <button class="scan-button" id="scanButton">
                         START SCAN
                     </button>
                 </section>
-                    
 
                 <!-- STATISTICS -->
                 <section class="stats">
-
                     <div class="stat-card">
-
-                        <div class="stat-title">
-                            FILES SCANNED
-                        </div>
-
-                        <div class="stat-value" id="filesScanned">
-                            0
-                        </div>
-
+                        <div class="stat-title">FILES SCANNED</div>
+                        <div class="stat-value" id="filesScanned">0</div>
                     </div>
 
-
                     <div class="stat-card">
-
-                        <div class="stat-title">
-                            THREATS FOUND
-                        </div>
-
-                        <div class="stat-value threat" id="threatsFound">
-                            0
-                        </div>
-
+                        <div class="stat-title">THREATS FOUND</div>
+                        <div class="stat-value threat" id="threatsFound">0</div>
                     </div>
 
-
                     <div class="stat-card">
-
-                        <div class="stat-title">
-                            LAST SCAN
-                        </div>
-
-                        <div class="stat-value small">
-                            Never
-                        </div>
-
+                        <div class="stat-title">LAST SCAN</div>
+                        <div class="stat-value small" id="lastScanTime">Never</div>
                     </div>
-
                 </section>
 
-
-                <!-- SCAN SECTION -->
+                <!-- SCAN CONTROLS -->
                 <section class="panel">
-
                     <div class="panel-header">
-
                         <div>
                             <h3>Scan</h3>
-
-                            <p>
-                                Select a folder to scan for known threats.
-                            </p>
+                            <p>Select a folder to scan for known threats.</p>
                         </div>
 
-                        <div class="scan-state" id="scanState">
-                            READY
-                        </div>
-
+                        <div class="scan-state" id="scanState">READY</div>
                     </div>
 
-
                     <div class="scan-area">
-
-                        <div class="scan-symbol">
-                            ⌕
-                        </div>
+                        <div class="scan-symbol">⌕</div>
 
                         <h3>Ready to scan</h3>
 
@@ -184,69 +144,35 @@
                             them against the local threat database.
                         </p>
 
-                        <div class="scan-progress" aria-live="polite">
-                            <div class="scan-progress-header">
-                                <span>Scan Progress</span>
-                                <span id="scanProgressText">0%</span>
-                            </div>
-
-                            <div class="scan-progress-bar">
-                                <span id="scanProgressBar"></span>
-                            </div>
-                        </div>
-
-                        <button
-                            class="secondary-button"
-                            id="selectFolderButton"
-                        >
+                        <button class="secondary-button" id="selectFolderButton">
                             SELECT FOLDER
                         </button>
-
                     </div>
-
                 </section>
 
-
-                <!-- RESULTS -->
+                <!-- RECENT RESULTS -->
                 <section class="panel results-panel">
-
                     <div class="panel-header">
-
                         <div>
                             <h3>Recent Results</h3>
-
-                            <p>
-                                Results from your latest scan.
-                            </p>
+                            <p>Results from your latest scan.</p>
                         </div>
-
                     </div>
 
                     <div class="results-empty" id="results">
-
-                        <div class="empty-icon">
-                            ✓
-                        </div>
-
-                        <span>
-                            No threats detected yet.
-                        </span>
-
+                        <div class="empty-icon">✓</div>
+                        <span>No threats detected yet.</span>
                     </div>
-
                 </section>
             </section>
 
+            <!-- QUARANTINE -->
             <section id="quarantinePage" class="page">
-
-                <!-- QUARANTINE HEADER -->
                 <header class="quarantine-header">
                     <div>
                         <div class="page-kicker">THREAT MANAGEMENT</div>
                         <h1>Quarantine</h1>
-                        <p>
-                            Review and manage files that Sentinel has isolated.
-                        </p>
+                        <p>Review and manage files that Sentinel has isolated.</p>
                     </div>
 
                     <div class="quarantine-count">
@@ -255,87 +181,68 @@
                     </div>
                 </header>
 
-
-                <!-- WARNING -->
                 <div class="quarantine-warning">
-
-                    <div class="warning-icon">
-                        !
-                    </div>
+                    <div class="warning-icon">!</div>
 
                     <div>
                         <strong>Quarantined files are isolated</strong>
-
                         <p>
-                            These files have been prevented from interacting with
-                            the rest of your system. Only restore a file if you
-                            are certain it is safe.
+                            These files have been prevented from interacting
+                            with the rest of your system. Only restore a file
+                            if you are certain it is safe.
                         </p>
                     </div>
-
                 </div>
 
-
-                <!-- QUARANTINE LIST -->
                 <section class="quarantine-panel">
-
                     <div class="quarantine-panel-header">
-
                         <div>
                             <h2>Quarantined Files</h2>
-
-                            <p>
-                                Files detected by Sentinel and moved into isolation.
-                            </p>
+                            <p>Files detected by Sentinel and moved into isolation.</p>
                         </div>
 
-                        <button
-                            class="delete-all-button"
-                            id="deleteAllQuarantine"
-                        >
+                        <button class="delete-all-button" id="deleteAllQuarantine">
                             DELETE ALL
                         </button>
-
                     </div>
 
-
-                    <!-- FILE LIST -->
-
-                    <div
-                        class="quarantine-list"
-                        id="quarantineList"
-                    >
-
-                        <!--
-                            JavaScript will insert quarantined
-                            files here.
-                        -->
-
-                        <div
-                            class="quarantine-empty"
-                            id="quarantineEmpty"
-                        >
-
-                            <div class="quarantine-empty-icon">
-                                ✓
-                            </div>
-
-                            <h3>
-                                Quarantine is empty
-                            </h3>
-
-                            <p>
-                                Sentinel hasn't isolated any files.
-                            </p>
-
+                    <div class="quarantine-list" id="quarantineList">
+                        <div class="quarantine-empty" id="quarantineEmpty">
+                            <div class="quarantine-empty-icon">✓</div>
+                            <h3>Quarantine is empty</h3>
+                            <p>Sentinel hasn't isolated any files.</p>
                         </div>
-
                     </div>
-
                 </section>
-
             </section>
 
+            <!-- HISTORY -->
+            <section id="historyPage" class="page">
+                <header class="topbar">
+                    <div>
+                        <h1>Scan History</h1>
+                        <p>Review previous scan results.</p>
+                    </div>
+                </header>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Previous Scans</h3>
+                            <p>Your scan history will appear here.</p>
+                        </div>
+                    </div>
+
+                    <div id="scanHistory">
+                        <div class="results-empty">
+                            <div class="empty-icon">◷</div>
+                            <span>No scan history available.</span>
+                        </div>
+                    </div>
+                </section>
+            </section>
+
+            <!-- SETTINGS -->
             <section id="settingsPage" class="page settings-page">
                 <div class="settings-header">
                     <div class="page-kicker">SYSTEM CONTROLS</div>
@@ -346,9 +253,10 @@
                 <div class="settings-panel">
                     <div class="setting-row">
                         <div class="setting-copy">
-                            <h3>Notifications</h3>
-                            <p>Enable or disable system notifications.</p>
+                            <h3>Smart Scan</h3>
+                            <p>walang kanen busseng?</p>
                         </div>
+
                         <label class="toggle-switch">
                             <input id="notificationsToggle" type="checkbox" checked>
                             <span class="slider"></span>
@@ -360,6 +268,7 @@
                             <h3>Scan Sound</h3>
                             <p>Play a sound when scanning completes.</p>
                         </div>
+
                         <label class="toggle-switch">
                             <input id="scanSoundToggle" type="checkbox" checked>
                             <span class="slider"></span>
@@ -368,11 +277,12 @@
 
                     <div class="setting-row">
                         <div class="setting-copy">
-                            <h3>Start with App</h3>
-                            <p>Launch Sentinel when the computer starts.</p>
+                            <h3>Scan Configuration</h3>
+                            <p>Control how scans operate.</p>
                         </div>
+
                         <label class="toggle-switch">
-                            <input type="checkbox" checked>
+                            <input id="scanConfigurationToggle" type="checkbox" checked>
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -382,10 +292,11 @@
                             <h3>Theme</h3>
                             <p>Switch between dark and light mode.</p>
                         </div>
+
                         <div class="theme-select-wrap">
-                            <select aria-label="Theme">
-                                <option selected>Dark</option>
-                                <option>Light</option>
+                            <select id="themeSelect" aria-label="Theme">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
                             </select>
                         </div>
                     </div>
@@ -395,8 +306,9 @@
                             <h3>Clear Results Automatically</h3>
                             <p>Reset the result panel when a new scan starts.</p>
                         </div>
+
                         <label class="toggle-switch">
-                            <input type="checkbox">
+                            <input id="clearResultsToggle" type="checkbox">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -406,8 +318,9 @@
                             <h3>Confirmation Before Quarantine</h3>
                             <p>Ask before quarantining a detected threat.</p>
                         </div>
+
                         <label class="toggle-switch">
-                            <input type="checkbox">
+                            <input id="quarantineConfirmationToggle" type="checkbox">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -417,25 +330,24 @@
                             <h3>Show Scan Summary</h3>
                             <p>Display summary details after each scan.</p>
                         </div>
+
                         <label class="toggle-switch">
-                            <input type="checkbox">
+                            <input id="scanSummaryToggle" type="checkbox" checked>
                             <span class="slider"></span>
                         </label>
                     </div>
                 </div>
 
                 <div class="settings-actions">
-                    <button class="clear-history-button">Clear Scan History</button>
+                    <button class="clear-history-button" id="clearHistoryButton">
+                        Clear Scan History
+                    </button>
                 </div>
             </section>
 
         </main>
-
-
     </div>
 
-
     <script type="module" src="./main.js"></script>
-
 </body>
 </html>
