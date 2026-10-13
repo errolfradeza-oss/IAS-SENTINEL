@@ -1,1 +1,12 @@
-[]
+[
+    {
+        "id": "50b3131b",
+        "original_path": "E:\\AntiMalware\\test_files\\test.txt",
+        "quarantine_path": "E:\\AntiMalware\\test_files\\test.txt",
+        "file_name": "test.txt",
+        "detection_name": "Test.Trojan",
+        "severity": "High",
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "date": "2026-10-13T11:29:13.094008"
+    }
+]
