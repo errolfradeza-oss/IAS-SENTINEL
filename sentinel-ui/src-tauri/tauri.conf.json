@@ -11,8 +11,8 @@
     "windows": [
       {
         "title": "sentinel-ui",
-        "width": 800,
-        "height": 600
+        "width": 1100,
+        "height": 720
       }
     ],
     "security": {
@@ -22,6 +22,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": [
+      "signatures.json"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
