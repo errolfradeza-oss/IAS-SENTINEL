@@ -877,7 +877,7 @@ async function handleScan() {
 scanButton?.addEventListener("click", handleScan);
 
 // ============================================================
-// QUARANTINE TNGINA busseng
+// QUARANTINE TNGINA busseng!!
 // ============================================================
 
 function setDeleteAllEnabled(enabled) {
