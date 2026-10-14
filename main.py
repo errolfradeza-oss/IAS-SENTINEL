@@ -582,7 +582,7 @@ class AntiMalwareApp(ctk.CTk):
 
         self.results_box.insert(
             "end",
-            "\n🚨 THREAT DETECTED\n"
+            "\n THREAT DETECTED\n"
             f"File: {file_path}\n"
             f"Detection: {threat_name}\n"
             f"Severity: {severity}\n"
