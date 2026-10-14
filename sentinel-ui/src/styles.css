@@ -2065,3 +2065,19 @@ html[data-theme="light"] {
         filter: blur(30px);
     }
 }
+
+/* ============================================================
+   DISABLED QUARANTINE BUTTONS
+   ============================================================ */
+
+.delete-all-button:disabled,
+.quarantine-action:disabled,
+.clear-history-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.delete-all-button:disabled:hover {
+    background: transparent;
+    border-color: rgba(239, 68, 68, 0.3);
+}

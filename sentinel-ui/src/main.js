@@ -1,4 +1,4 @@
-const { open } = window.__TAURI__.dialog;
+const { open, ask } = window.__TAURI__.dialog;
 const { Command } = window.__TAURI__.shell;
 
 // ============================================================
@@ -529,50 +529,36 @@ document.querySelector("#settingsButton")?.addEventListener(
 // FOLDER SELECTION
 // ============================================================
 
-async function selectScanFolder() {
+async function selectScanPath() {
     try {
-        const folder = await open({
-            directory: true,
+        const selected = await open({
             multiple: false,
-            title: "Select a folder to scan"
+            directory: false,
+            title: "Select a file or folder to scan"
         });
 
-        if (!folder) {
-            return;
-        }
+        if (!selected) return null;
 
-        selectedFolder = Array.isArray(folder) ? folder[0] : folder;
+        selectedFolder = selected;
 
         if (selectedFolderText) {
-            selectedFolderText.textContent = selectedFolder;
+            selectedFolderText.textContent = selected;
+            selectedFolderText.title = selected;
         }
 
-        if (selectFolderButton) {
-            selectFolderButton.textContent = "Change Folder";
-        }
-
-        if (scanButton) {
-            scanButton.disabled = false;
-        }
-
-        setCircularMessage(
-            "Folder Selected",
-            "Ready to scan the selected folder"
-        );
-
-        if (scanLabel && !scanInProgress) {
-            scanLabel.textContent = "READY";
-        }
+        return selected;
     } catch (error) {
-        console.error("Folder selection failed:", error);
+        console.error("Selection failed:", error);
         setCircularMessage(
-            "Folder Selection Failed",
-            "Unable to open the folder picker."
+            "Selection Failed",
+            String(error)
         );
+        return null;
     }
 }
 
-selectFolderButton?.addEventListener("click", selectScanFolder);
+selectFolderButton?.addEventListener("click", selectScanPath);
+
 
 // ============================================================
 // SCANNER OUTPUT NORMALIZATION
@@ -788,15 +774,30 @@ async function scanFolder(folder) {
     return normalized;
 }
 
+
 async function handleScan() {
-    if (scanInProgress) {
-        return;
-    }
+    if (scanInProgress) return;
 
+    // Ask for a file if no path has been selected.
     if (!selectedFolder) {
-        await selectScanFolder();
+        try {
+            const selected = await open({
+                multiple: false,
+                directory: false,
+                title: "Select a file to scan"
+            });
 
-        if (!selectedFolder) {
+            if (!selected) return;
+
+            selectedFolder = selected;
+
+            if (selectedFolderText) {
+                selectedFolderText.textContent = selected;
+                selectedFolderText.title = selected;
+            }
+        } catch (error) {
+            console.error("File picker failed:", error);
+            alert("Could not open the file picker.");
             return;
         }
     }
@@ -808,74 +809,36 @@ async function handleScan() {
         scanButton.textContent = "Scanning...";
     }
 
-    if (selectFolderButton) {
-        selectFolderButton.disabled = true;
-    }
-
-    if (results) {
-        results.innerHTML = `
-            <div class="result-item">
-                <div>
-                    <strong>Scanning folder...</strong>
-                    <p>Please wait while Sentinel checks your files.</p>
-                </div>
-            </div>
-        `;
-    }
-
-    setLiveSecurityStatus("scanning");
-    setCircularMessage(
-        "Scanning Your Files",
-        "Checking files for potential threats..."
-    );
-
-    if (scanLabel) {
-        scanLabel.textContent = "SCANNING";
-    }
-
-    startScanProgress();
-
-    const startedAt = new Date();
-
     try {
+        setLiveSecurityStatus("scanning");
+        setCircularMessage(
+            "Scanning Your Selection",
+            "Checking the selected path for threats..."
+        );
+
+        startScanProgress();
+
         const result = await scanFolder(selectedFolder);
 
         stopScanProgress(100);
 
-        const scanned = result.filesScanned;
-        const threatList = result.threats;
-        const threatCount = Math.max(
-            result.threatCount,
-            threatList.length
+        updateScanStats(
+            result.filesScanned,
+            result.threatCount
         );
 
-        updateScanStats(scanned, threatCount);
-        renderScanResults(threatList);
+        renderScanResults(result.threats);
 
-        const hasThreats = threatCount > 0;
+        setLiveSecurityStatus(
+            result.threatCount > 0 ? "threat" : "clean"
+        );
 
-        /*setLiveSecurityStatus(hasThreats ? "threat" : "clean"); */
-        const protectionStatus =
-            threatCount === 0 ? "clean" :
-            threatCount <= 3 ? "slight" :
-            "threat";
-
-        setLiveSecurityStatus(protectionStatus);
-
-        //text putangina
-        
         setCircularMessage(
-            hasThreats ? "Threats Detected" : "Scan Complete",
-            hasThreats
-                ? `${threatCount} potential threat(s) detected. Review the results below.`
-                : "No threats were reported by the scanner."
+            result.threatCount > 0 ? "Threats Detected" : "Scan Complete",
+            result.threatCount > 0
+                ? `${result.threatCount} potential threat(s) detected.`
+                : "No known threats reported."
         );
-
-        if (scanState) {
-            scanState.textContent = hasThreats
-                ? "THREATS DETECTED"
-                : "SCAN COMPLETE";
-        }
 
         if (lastScanTime) {
             lastScanTime.textContent = formatDate();
@@ -884,57 +847,22 @@ async function handleScan() {
         saveScanHistory({
             date: new Date().toISOString(),
             folder: selectedFolder,
-            filesScanned: scanned,
-            threatsFound: threatCount,
-            status: hasThreats ? "Threats detected" : "Clean"
+            filesScanned: result.filesScanned,
+            threatsFound: result.threatCount,
+            status: result.threatCount > 0
+                ? "Threats detected"
+                : "Clean"
         });
 
-        await sendScanNotification(
-            hasThreats ? "Sentinel: Threats Detected" : "Sentinel: Scan Complete",
-            hasThreats
-                ? `${threatCount} potential threat(s) detected.`
-                : `Scanned ${scanned} file(s). No threats reported.`
-        );
-
-        playScanSound(!hasThreats);
     } catch (error) {
         console.error("Scan failed:", error);
-
         stopScanProgress(0);
         setLiveSecurityStatus("error");
         setCircularError();
 
-        if (scanState) {
-            scanState.textContent = "SCAN ERROR";
-        }
-
         if (results) {
-            results.innerHTML = `
-                <div class="result-item error-result">
-                    <span class="result-icon">!</span>
-                    <div>
-                        <strong>Scan failed</strong>
-                        <p>${escapeHtml(error.message || "An unknown error occurred.")}</p>
-                    </div>
-                </div>
-            `;
+            results.textContent = `Scan failed: ${error.message}`;
         }
-
-        saveScanHistory({
-            date: new Date().toISOString(),
-            folder: selectedFolder,
-            filesScanned: 0,
-            threatsFound: 0,
-            status: "Error",
-            error: error.message || "Unknown error"
-        });
-
-        await sendScanNotification(
-            "Sentinel: Scan Failed",
-            error.message || "The scan could not be completed."
-        );
-
-        playScanSound(false);
     } finally {
         scanInProgress = false;
 
@@ -942,18 +870,23 @@ async function handleScan() {
             scanButton.disabled = false;
             scanButton.textContent = "Scan Now";
         }
-
-        if (selectFolderButton) {
-            selectFolderButton.disabled = false;
-        }
     }
 }
+
 
 scanButton?.addEventListener("click", handleScan);
 
 // ============================================================
 // QUARANTINE
 // ============================================================
+
+function setDeleteAllEnabled(enabled) {
+    const button = document.querySelector("#deleteAllQuarantine");
+
+    if (button) {
+        button.disabled = !enabled;
+    }
+}
 
 async function runQuarantineCommand(args) {
     const command = Command.create("python", [
@@ -980,6 +913,9 @@ async function loadQuarantine() {
         return;
     }
 
+    // Disable the delete-all button until we know items exist.
+    setDeleteAllEnabled(false);
+
     container.innerHTML = `
         <div class="result-item">
             <p>Loading quarantined files...</p>
@@ -1002,6 +938,14 @@ async function loadQuarantine() {
         const items = Array.isArray(data)
             ? data
             : data.items ?? data.quarantine ?? [];
+
+        const countEl = document.querySelector("#quarantineCount");
+        if (countEl) {
+            countEl.textContent = items.length;
+        }
+
+        // Only enable "delete all" when there is something to delete.
+        setDeleteAllEnabled(items.length > 0);
 
         if (!Array.isArray(items) || items.length === 0) {
             container.innerHTML = `
@@ -1040,6 +984,7 @@ async function loadQuarantine() {
                     <div class="quarantine-actions">
                         <button
                             type="button"
+                            class="quarantine-action restore-button"
                             data-quarantine-action="restore"
                             data-quarantine-id="${escapeHtml(id)}"
                         >
@@ -1048,6 +993,7 @@ async function loadQuarantine() {
 
                         <button
                             type="button"
+                            class="quarantine-action delete-button"
                             data-quarantine-action="delete"
                             data-quarantine-id="${escapeHtml(id)}"
                         >
@@ -1089,10 +1035,10 @@ document.querySelector("#quarantineList")?.addEventListener(
             return;
         }
 
-        if (
-            action === "delete" &&
-            !confirm("Permanently delete this quarantined item?")
-        ) {
+        if (!await ask(
+            "Permanently delete all quarantined items?",
+            { title: "Sentinel", type: "warning" }
+        )) {
             return;
         }
 
@@ -1110,7 +1056,7 @@ document.querySelector("#quarantineList")?.addEventListener(
     }
 );
 
-document.querySelector("#clearQuarantineButton")?.addEventListener(
+document.querySelector("#deleteAllQuarantine")?.addEventListener(
     "click",
     async () => {
         if (!confirm("Permanently delete all quarantined items?")) {
@@ -1131,16 +1077,34 @@ document.querySelector("#clearQuarantineButton")?.addEventListener(
 // SCAN HISTORY
 // ============================================================
 
-function renderHistory() {
-    const container = document.querySelector("#historyList");
+async function renderHistory() {
+    const container = document.querySelector("#scanHistory");
 
     if (!container) {
         return;
     }
 
-    const history = getScanHistory();
+    // 1. Local scan history (unchanged behavior)
+    const scanHistory = getScanHistory();
 
-    if (history.length === 0) {
+    // 2. Quarantine events from history.py on disk
+    let events = [];
+
+    try {
+        const command = Command.create("python", ["history.py", "list"]);
+        const output = await command.execute();
+
+        if (output.code === 0 && output.stdout) {
+            const parsed = JSON.parse(output.stdout);
+            if (Array.isArray(parsed)) {
+                events = parsed;
+            }
+        }
+    } catch (error) {
+        console.warn("Could not load event history:", error);
+    }
+
+    if (scanHistory.length === 0 && events.length === 0) {
         container.innerHTML = `
             <div class="result-item">
                 <div>
@@ -1149,11 +1113,10 @@ function renderHistory() {
                 </div>
             </div>
         `;
-
         return;
     }
 
-    container.innerHTML = history.map(entry => {
+    const scanRows = scanHistory.map(entry => {
         const status = entry.status || "Unknown";
         const date = entry.date
             ? new Date(entry.date).toLocaleString()
@@ -1172,18 +1135,44 @@ function renderHistory() {
                 </div>
             </div>
         `;
-    }).join("");
+    });
+
+    // Newest events first (history.py already returns newest first)
+    const eventRows = events.map(event => `
+        <div class="result-item history-item">
+            <div class="result-details">
+                <strong>${escapeHtml(event.action === "restored" ? "Restored from quarantine" : "Deleted from quarantine")}</strong>
+                <p>${escapeHtml(event.file_name || "Unknown file")}</p>
+                <small>${escapeHtml(new Date(event.date).toLocaleString())}</small>
+                <small>
+                    Detection: ${escapeHtml(event.detection_name || "Unknown")}
+                    · Severity: ${escapeHtml(event.severity || "Unknown")}
+                </small>
+            </div>
+        </div>
+    `);
+
+    container.innerHTML = [...scanRows, ...eventRows].join("");
 }
 
-clearHistoryButton?.addEventListener("click", () => {
-    if (!confirm("Clear your entire scan history?")) {
+clearHistoryButton?.addEventListener("click", async () => {
+    if (!await ask(
+        "Clear your entire scan history?",
+        { title: "Sentinel", type: "warning" }
+    )) {
         return;
     }
 
     localStorage.removeItem(SCAN_HISTORY_KEY);
+
+    try {
+        await Command.create("python", ["history.py", "clear"]).execute();
+    } catch (error) {
+        console.warn("Could not clear event history:", error);
+    }
+
     renderHistory();
 });
-
 // ============================================================
 // SETTINGS INITIALIZATION
 // ============================================================
