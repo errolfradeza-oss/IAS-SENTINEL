@@ -1,4 +1,4 @@
-const { open } = window.__TAURI__.dialog;
+const { open, ask } = window.__TAURI__.dialog;
 const { Command } = window.__TAURI__.shell;
 
 // ============================================================
@@ -955,6 +955,14 @@ scanButton?.addEventListener("click", handleScan);
 // QUARANTINE
 // ============================================================
 
+function setDeleteAllEnabled(enabled) {
+    const button = document.querySelector("#deleteAllQuarantine");
+
+    if (button) {
+        button.disabled = !enabled;
+    }
+}
+
 async function runQuarantineCommand(args) {
     const command = Command.create("python", [
         "quarantine.py",
@@ -980,6 +988,9 @@ async function loadQuarantine() {
         return;
     }
 
+    // Disable the delete-all button until we know items exist.
+    setDeleteAllEnabled(false);
+
     container.innerHTML = `
         <div class="result-item">
             <p>Loading quarantined files...</p>
@@ -1002,6 +1013,14 @@ async function loadQuarantine() {
         const items = Array.isArray(data)
             ? data
             : data.items ?? data.quarantine ?? [];
+
+        const countEl = document.querySelector("#quarantineCount");
+        if (countEl) {
+            countEl.textContent = items.length;
+        }
+
+        // Only enable "delete all" when there is something to delete.
+        setDeleteAllEnabled(items.length > 0);
 
         if (!Array.isArray(items) || items.length === 0) {
             container.innerHTML = `
@@ -1040,6 +1059,7 @@ async function loadQuarantine() {
                     <div class="quarantine-actions">
                         <button
                             type="button"
+                            class="quarantine-action restore-button"
                             data-quarantine-action="restore"
                             data-quarantine-id="${escapeHtml(id)}"
                         >
@@ -1048,6 +1068,7 @@ async function loadQuarantine() {
 
                         <button
                             type="button"
+                            class="quarantine-action delete-button"
                             data-quarantine-action="delete"
                             data-quarantine-id="${escapeHtml(id)}"
                         >
@@ -1089,10 +1110,10 @@ document.querySelector("#quarantineList")?.addEventListener(
             return;
         }
 
-        if (
-            action === "delete" &&
-            !confirm("Permanently delete this quarantined item?")
-        ) {
+        if (!await ask(
+            "Permanently delete all quarantined items?",
+            { title: "Sentinel", type: "warning" }
+        )) {
             return;
         }
 
@@ -1110,7 +1131,7 @@ document.querySelector("#quarantineList")?.addEventListener(
     }
 );
 
-document.querySelector("#clearQuarantineButton")?.addEventListener(
+document.querySelector("#deleteAllQuarantine")?.addEventListener(
     "click",
     async () => {
         if (!confirm("Permanently delete all quarantined items?")) {
@@ -1131,16 +1152,34 @@ document.querySelector("#clearQuarantineButton")?.addEventListener(
 // SCAN HISTORY
 // ============================================================
 
-function renderHistory() {
-    const container = document.querySelector("#historyList");
+async function renderHistory() {
+    const container = document.querySelector("#scanHistory");
 
     if (!container) {
         return;
     }
 
-    const history = getScanHistory();
+    // 1. Local scan history (unchanged behavior)
+    const scanHistory = getScanHistory();
 
-    if (history.length === 0) {
+    // 2. Quarantine events from history.py on disk
+    let events = [];
+
+    try {
+        const command = Command.create("python", ["history.py", "list"]);
+        const output = await command.execute();
+
+        if (output.code === 0 && output.stdout) {
+            const parsed = JSON.parse(output.stdout);
+            if (Array.isArray(parsed)) {
+                events = parsed;
+            }
+        }
+    } catch (error) {
+        console.warn("Could not load event history:", error);
+    }
+
+    if (scanHistory.length === 0 && events.length === 0) {
         container.innerHTML = `
             <div class="result-item">
                 <div>
@@ -1149,11 +1188,10 @@ function renderHistory() {
                 </div>
             </div>
         `;
-
         return;
     }
 
-    container.innerHTML = history.map(entry => {
+    const scanRows = scanHistory.map(entry => {
         const status = entry.status || "Unknown";
         const date = entry.date
             ? new Date(entry.date).toLocaleString()
@@ -1172,18 +1210,44 @@ function renderHistory() {
                 </div>
             </div>
         `;
-    }).join("");
+    });
+
+    // Newest events first (history.py already returns newest first)
+    const eventRows = events.map(event => `
+        <div class="result-item history-item">
+            <div class="result-details">
+                <strong>${escapeHtml(event.action === "restored" ? "Restored from quarantine" : "Deleted from quarantine")}</strong>
+                <p>${escapeHtml(event.file_name || "Unknown file")}</p>
+                <small>${escapeHtml(new Date(event.date).toLocaleString())}</small>
+                <small>
+                    Detection: ${escapeHtml(event.detection_name || "Unknown")}
+                    · Severity: ${escapeHtml(event.severity || "Unknown")}
+                </small>
+            </div>
+        </div>
+    `);
+
+    container.innerHTML = [...scanRows, ...eventRows].join("");
 }
 
-clearHistoryButton?.addEventListener("click", () => {
-    if (!confirm("Clear your entire scan history?")) {
+clearHistoryButton?.addEventListener("click", async () => {
+    if (!await ask(
+        "Clear your entire scan history?",
+        { title: "Sentinel", type: "warning" }
+    )) {
         return;
     }
 
     localStorage.removeItem(SCAN_HISTORY_KEY);
+
+    try {
+        await Command.create("python", ["history.py", "clear"]).execute();
+    } catch (error) {
+        console.warn("Could not clear event history:", error);
+    }
+
     renderHistory();
 });
-
 // ============================================================
 // SETTINGS INITIALIZATION
 // ============================================================
