@@ -13,7 +13,7 @@
         <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="brand">
-                <div class="brand-icon">S</div>
+                <!--div class="brand-icon">S</div-->
                 <div>
                     <div class="brand-name">SENTINEL</div>
                     <div class="brand-subtitle">Security Center</div>
@@ -44,301 +44,346 @@
 
             <div class="sidebar-footer">
                 Sentinel
-                <span>v1.0.0</span>
+                <span>v1.0.1</span>
             </div>
         </aside>
 
         <!-- MAIN CONTENT -->
         <main class="main" id="mainContent">
+            <div class="page-viewport">
+                <div class="page-track">
+                    <!-- DASHBOARD -->
+                    <section id="dashboardPage" class="page active">
 
-            <!-- DASHBOARD -->
-            <section id="dashboardPage" class="page active">
+                        <header class="topbar">
+                            <div class="dashboard-heading">
+                                <h1>Dashboard</h1>
+                                <p>Monitor your system's security status.</p>
+                            </div>
 
-                <header class="topbar">
-                    <div class="dashboard-heading">
-                        <h1>Dashboard</h1>
-                        <p>Monitor your system's security status.</p>
-                    </div>
+                            <div class="scan-header-stats" id="scanHeaderStats" hidden>
+                                <div class="scan-header-stat">
+                                    <span>FILES SCANNED</span>
+                                    <strong id="scanHeaderFilesScanned">0</strong>
+                                </div>
+                                <div class="scan-header-stat">
+                                    <span>THREATS FOUND</span>
+                                    <strong id="scanHeaderThreatsFound">0</strong>
+                                </div>
+                            </div>
 
-                    <div class="scan-header-stats" id="scanHeaderStats" hidden>
-                        <div class="scan-header-stat">
-                            <span>FILES SCANNED</span>
-                            <strong id="scanHeaderFilesScanned">0</strong>
+                            <div class="dashboard-last-scan" id="dashboardLastScan">
+                                <span>LAST SCAN</span>
+                                <strong id="lastScanTime" title="Never">Never</strong>
+                            </div>
+
+                            <div class="protection-status" data-status="unknown" hidden>
+                                <span class="status-dot"></span>
+                                <span id="protectionStatus">STATUS UNKNOWN</span>
+                            </div>
+                        </header>
+
+                        <!-- SCAN OPTIONS -->
+                        <section class="scan-options" aria-label="Scan options">
+                            <article class="scan-option-card">
+                                <div class="scan-option-heading">
+                                    <span class="scan-option-icon quick-scan-icon" aria-hidden="true">◉</span>
+                                    <h2>Quick Scan</h2>
+                                </div>
+                                <p>Scans critical areas where malware usually resides.</p>
+                                <button class="scan-option-button" type="button" data-scan-mode="quick">
+                                    Quick Scan
+                                </button>
+                            </article>
+
+                            <article class="scan-option-card">
+                                <div class="scan-option-heading">
+                                    <span class="scan-option-icon system-scan-icon" aria-hidden="true">▤</span>
+                                    <h2>Full Scan</h2>
+                                </div>
+                                <p>Scans all your files and directories.</p>
+                                <button class="scan-option-button" type="button" data-scan-mode="full">
+                                    Full Scan
+                                </button>
+                            </article>
+
+                            <article class="scan-option-card custom-scan-card">
+                                <div class="scan-option-heading">
+                                    <span class="scan-option-icon custom-scan-icon" aria-hidden="true">⌕</span>
+                                    <h2>Custom Scan</h2>
+                                </div>
+                                <p>Choose a file or folder to scan for known threats.</p>
+                                <span id="selectedFolder" class="selected-path">No file or folder selected</span>
+                                <div class="custom-scan-controls">
+                                    <button class="secondary-button" id="selectFolderButton" type="button">Choose Folder</button>
+                                    <button class="secondary-button" id="selectFileButton" type="button">Choose File</button>
+                                </div>
+                                <div class="custom-scan-footer">
+                                    <button class="scan-option-button" id="scanButton" type="button">Custom Scan</button>
+                                </div>
+                            </article>
+                        </section>
+
+                        <section class="scan-session" id="scanSession" hidden>
+                            <div class="scan-session-actions">
+                                <button class="secondary-button scan-back-button" id="backToScanOptions" type="button">
+                                    Back to scan options
+                                </button>
+                                <button class="secondary-button scan-again-button" id="scanAnotherButton" type="button" hidden>
+                                    Scan another file or folder
+                                </button>
+                            </div>
+                            <section class="security-card live-security-card" data-status="unknown">
+                                <div class="scan-ring-panel">
+                                    <div class="scan-ripple-wrap" id="scanRippleWrap">
+                                        <div class="scan-ripple scan-ripple-one"></div>
+                                        <div class="scan-ripple scan-ripple-two"></div>
+                                        <div class="scan-ripple scan-ripple-three"></div>
+                                        <div class="scan-ring" id="scanRing" style="--progress: 0">
+                                            <div class="scan-ring-inner">
+                                                <span id="scanPercent">0%</span>
+                                                <small id="scanLabel">READY</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <h2 id="scanHeading">Quick Scan</h2>
+                                    <p id="scanSubtext">Quick Scan is not available yet.</p>
+                                </div>
+                                <button class="scan-button" id="modeScanButton" type="button" disabled>
+                                    START SCAN
+                                </button>
+                                <div class="scan-result-content results-empty" id="results" hidden>
+                                    <div class="empty-icon">✓</div>
+                                    <span>No threats detected yet.</span>
+                                </div>
+                            </section>
+                        </section>
+
+                    </section>
+
+                    <!-- QUARANTINE -->
+                    <section id="quarantinePage" class="page">
+                        <header class="quarantine-header">
+                            <div>
+                                <div class="page-kicker">THREAT MANAGEMENT</div>
+                                <h1>Quarantine</h1>
+                                <p>Review and manage files that Sentinel has isolated.</p>
+                            </div>
+
+                            <div class="quarantine-count">
+                                <span id="quarantineCount">0</span>
+                                <span>ITEMS</span>
+                            </div>
+                        </header>
+
+                        <div class="quarantine-warning">
+                            <div class="warning-icon">!</div>
+
+                            <div>
+                                <strong>Quarantined files are isolated</strong>
+                                <p>
+                                    These files have been prevented from interacting
+                                    with the rest of your system. Only restore a file
+                                    if you are certain it is safe.
+                                </p>
+                            </div>
                         </div>
-                        <div class="scan-header-stat">
-                            <span>THREATS FOUND</span>
-                            <strong id="scanHeaderThreatsFound">0</strong>
-                        </div>
-                    </div>
 
-                    <div class="dashboard-last-scan" id="dashboardLastScan">
-                        <span>LAST SCAN</span>
-                        <strong id="lastScanTime" title="Never">Never</strong>
-                    </div>
+                        <section class="quarantine-panel">
+                            <div class="quarantine-panel-header">
+                                <div>
+                                    <h2>Quarantined Files</h2>
+                                    <p>Files detected by Sentinel and moved into isolation.</p>
+                                </div>
 
-                    <div class="protection-status" data-status="unknown" hidden>
-                        <span class="status-dot"></span>
-                        <span id="protectionStatus">STATUS UNKNOWN</span>
-                    </div>
-                </header>
+                                <button class="delete-all-button" id="deleteAllQuarantine">
+                                    DELETE ALL
+                                </button>
+                            </div>
 
-                <!-- SCAN OPTIONS -->
-                <section class="scan-options" aria-label="Scan options">
-                    <article class="scan-option-card">
-                        <div class="scan-option-heading">
-                            <span class="scan-option-icon quick-scan-icon" aria-hidden="true">◉</span>
-                            <h2>Quick Scan</h2>
-                        </div>
-                        <p>Scans critical areas where malware usually resides.</p>
-                        <button class="scan-option-button" type="button" data-scan-mode="quick">
-                            Quick Scan
-                        </button>
-                    </article>
+                            <div class="quarantine-list" id="quarantineList">
+                                <div class="quarantine-empty" id="quarantineEmpty">
+                                    <div class="quarantine-empty-icon">✓</div>
+                                    <h3>Quarantine is empty</h3>
+                                    <p>Sentinel hasn't isolated any files.</p>
+                                </div>
+                            </div>
+                        </section>
+                    </section>
 
-                    <article class="scan-option-card">
-                        <div class="scan-option-heading">
-                            <span class="scan-option-icon system-scan-icon" aria-hidden="true">▤</span>
-                            <h2>Full Scan</h2>
-                        </div>
-                        <p>Scans all your files and directories.</p>
-                        <button class="scan-option-button" type="button" data-scan-mode="full">
-                            Full Scan
-                        </button>
-                    </article>
+                    <!-- HISTORY -->
+                    <section id="historyPage" class="page">
+                        <header class="topbar">
+                            <div>
+                                <h1>Scan History</h1>
+                                <p>Review previous scan results.</p>
+                            </div>
+                        </header>
 
-                    <article class="scan-option-card custom-scan-card">
-                        <div class="scan-option-heading">
-                            <span class="scan-option-icon custom-scan-icon" aria-hidden="true">⌕</span>
-                            <h2>Custom Scan</h2>
-                        </div>
-                        <p>Choose a file or folder to scan for known threats.</p>
-                        <span id="selectedFolder" class="selected-path">No file or folder selected</span>
-                        <div class="custom-scan-controls">
-                            <button class="secondary-button" id="selectFolderButton" type="button">Choose Folder</button>
-                            <button class="secondary-button" id="selectFileButton" type="button">Choose File</button>
-                        </div>
-                        <div class="custom-scan-footer">
-                            <button class="scan-option-button" id="scanButton" type="button">Custom Scan</button>
-                        </div>
-                    </article>
-                </section>
+                        <section class="panel">
+                            <div class="panel-header">
+                                <div>
+                                    <h3>Previous Scans</h3>
+                                    <p>Your scan history will appear here.</p>
+                                </div>
+                            </div>
 
-                <section class="scan-session" id="scanSession" hidden>
-                    <div class="scan-session-actions">
-                        <button class="secondary-button scan-back-button" id="backToScanOptions" type="button">
-                            Back to scan options
-                        </button>
-                        <button class="secondary-button scan-again-button" id="scanAnotherButton" type="button" hidden>
-                            Scan another file or folder
-                        </button>
-                    </div>
-                    <section class="security-card live-security-card" data-status="unknown">
-                        <div class="scan-ring-panel">
-                            <div class="scan-ripple-wrap" id="scanRippleWrap">
-                                <div class="scan-ripple scan-ripple-one"></div>
-                                <div class="scan-ripple scan-ripple-two"></div>
-                                <div class="scan-ripple scan-ripple-three"></div>
-                                <div class="scan-ring" id="scanRing" style="--progress: 0">
-                                    <div class="scan-ring-inner">
-                                        <span id="scanPercent">0%</span>
-                                        <small id="scanLabel">READY</small>
+                            <div id="scanHistory">
+                                <div class="results-empty">
+                                    <div class="empty-icon">◷</div>
+                                    <span>No scan history available.</span>
+                                </div>
+                            </div>
+                        </section>
+                    </section>
+
+                    <!-- SETTINGS -->
+                    <section id="settingsPage" class="page settings-page">
+                        <div class="settings-header">
+                            <div class="page-kicker">SYSTEM CONTROLS</div>
+                            <h1>Settings</h1>
+                            <p>Configure notifications, security behavior, and app preferences.</p>
+                        </div>
+
+                        <div class="settings-panel">
+
+                            <!--div class="setting-row">
+                                <div class="setting-copy">
+                                    <h3>Notifications</h3>
+                                    <p>Show a system notification when a scan finishes.</p>
+                                </div>
+
+                                <label class="toggle-switch">
+                                    <input id="notificationsToggle" type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div-->
+
+                            <div class="setting-row">
+                                <div class="setting-copy">
+                                    <h3>Scan Sound</h3>
+                                    <p>Play a sound when scanning completes.</p>
+                                </div>
+
+                                <label class="toggle-switch">
+                                    <input id="scanSoundToggle" type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <!--div class="setting-row">
+                                <div class="setting-copy">
+                                    <h3>Scan Configuration</h3>
+                                    <p>Control how scans operate.</p>
+                                </div>
+
+                                <label class="toggle-switch">
+                                    <input id="scanConfigurationToggle" type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div-->
+
+                            
+                            <div class="setting-row theme-setting-row">
+                                <div class="setting-copy">
+                                    <div class="theme-picker" id="themePicker">
+                                        <div class="theme-preview" id="themePreview">
+                                            <div class="theme-preview-content">
+                                                <h3>Appearance</h3>
+                                                <span>Your security center, your style.</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="theme-options" role="group"
+                                            aria-label="Choose appearance">
+                                            <button type="button" class="theme-option"
+                                                    data-theme-option="dark" aria-pressed="false">
+                                                <span class="theme-option-icon">☾</span>
+                                                <span>Dark</span>
+                                            </button>
+
+                                            <button type="button" class="theme-option"
+                                                    data-theme-option="light" aria-pressed="false">
+                                                <span class="theme-option-icon">☀</span>
+                                                <span>Light</span>
+                                            </button>
+
+                                            <button type="button" class="theme-option"
+                                                    data-theme-option="system" aria-pressed="false">
+                                                <span class="theme-option-icon">◐</span>
+                                                <span>System</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <h2 id="scanHeading">Quick Scan</h2>
-                            <p id="scanSubtext">Quick Scan is not available yet.</p>
+                            <!--div class="setting-row">
+                                <div class="setting-copy">
+                                    <h3>Clear Results Automatically</h3>
+                                    <p>Reset the result panel when a new scan starts.</p>
+                                </div>
+
+                                <label class="toggle-switch">
+                                    <input id="clearResultsToggle" type="checkbox">
+                                    <span class="slider"></span>
+                                </label>
+                            </div-->
+
+                            <!--div class="setting-row">
+                                <div class="setting-copy">
+                                    <h3>Confirmation Before Quarantine</h3>
+                                    <p>Ask before quarantining a detected threat.</p>
+                                </div>
+
+                                <label class="toggle-switch">
+                                    <input id="quarantineConfirmationToggle" type="checkbox">
+                                    <span class="slider"></span>
+                                </label>
+                            </div-->
+
+                            <!--div class="setting-row">
+                                <div class="setting-copy">
+                                    <h3>Show Scan Summary</h3>
+                                    <p>Display summary details after each scan.</p>
+                                </div>
+
+                                <label class="toggle-switch">
+                                    <input id="scanSummaryToggle" type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div-->
                         </div>
-                        <button class="scan-button" id="modeScanButton" type="button" disabled>
-                            START SCAN
-                        </button>
-                        <div class="scan-result-content results-empty" id="results" hidden>
-                            <div class="empty-icon">✓</div>
-                            <span>No threats detected yet.</span>
+
+                                                <section class="settings-panel exclusions-panel">
+                            <div class="panel-header">
+                                <div>
+                                    <h2>Scan Exclusions</h2>
+                                    <p>Files and folders listed here will be skipped during scans.</p>
+                                </div>
+                            </div>
+
+                            <div class="exclusions-controls">
+                                <button class="secondary-button" id="excludeFolderButton" type="button">
+                                    Exclude Folder
+                                </button>
+                                <button class="secondary-button" id="excludeFileButton" type="button">
+                                    Exclude File
+                                </button>
+                            </div>
+
+                            <div id="exclusionsList" class="exclusions-list">
+                                <p class="exclusions-empty">Loading exclusions...</p>
+                            </div>
+                        </section>
+
+                        <div class="settings-actions">
+                            <button class="clear-history-button" id="clearHistoryButton">
+                                Clear Scan History
+                            </button>
                         </div>
-                    </section>
                 </section>
-
-            </section>
-
-            <!-- QUARANTINE -->
-            <section id="quarantinePage" class="page">
-                <header class="quarantine-header">
-                    <div>
-                        <div class="page-kicker">THREAT MANAGEMENT</div>
-                        <h1>Quarantine</h1>
-                        <p>Review and manage files that Sentinel has isolated.</p>
-                    </div>
-
-                    <div class="quarantine-count">
-                        <span id="quarantineCount">0</span>
-                        <span>ITEMS</span>
-                    </div>
-                </header>
-
-                <div class="quarantine-warning">
-                    <div class="warning-icon">!</div>
-
-                    <div>
-                        <strong>Quarantined files are isolated</strong>
-                        <p>
-                            These files have been prevented from interacting
-                            with the rest of your system. Only restore a file
-                            if you are certain it is safe.
-                        </p>
-                    </div>
                 </div>
-
-                <section class="quarantine-panel">
-                    <div class="quarantine-panel-header">
-                        <div>
-                            <h2>Quarantined Files</h2>
-                            <p>Files detected by Sentinel and moved into isolation.</p>
-                        </div>
-
-                        <button class="delete-all-button" id="deleteAllQuarantine">
-                            DELETE ALL
-                        </button>
-                    </div>
-
-                    <div class="quarantine-list" id="quarantineList">
-                        <div class="quarantine-empty" id="quarantineEmpty">
-                            <div class="quarantine-empty-icon">✓</div>
-                            <h3>Quarantine is empty</h3>
-                            <p>Sentinel hasn't isolated any files.</p>
-                        </div>
-                    </div>
-                </section>
-            </section>
-
-            <!-- HISTORY -->
-            <section id="historyPage" class="page">
-                <header class="topbar">
-                    <div>
-                        <h1>Scan History</h1>
-                        <p>Review previous scan results.</p>
-                    </div>
-                </header>
-
-                <section class="panel">
-                    <div class="panel-header">
-                        <div>
-                            <h3>Previous Scans</h3>
-                            <p>Your scan history will appear here.</p>
-                        </div>
-                    </div>
-
-                    <div id="scanHistory">
-                        <div class="results-empty">
-                            <div class="empty-icon">◷</div>
-                            <span>No scan history available.</span>
-                        </div>
-                    </div>
-                </section>
-            </section>
-
-            <!-- SETTINGS -->
-            <section id="settingsPage" class="page settings-page">
-                <div class="settings-header">
-                    <div class="page-kicker">SYSTEM CONTROLS</div>
-                    <h1>Settings</h1>
-                    <p>Configure notifications, security behavior, and app preferences.</p>
-                </div>
-
-                <div class="settings-panel">
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <h3>Notifications</h3>
-                            <p>Show a system notification when a scan finishes.</p>
-                        </div>
-
-                        <label class="toggle-switch">
-                            <input id="notificationsToggle" type="checkbox" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <h3>Scan Sound</h3>
-                            <p>Play a sound when scanning completes.</p>
-                        </div>
-
-                        <label class="toggle-switch">
-                            <input id="scanSoundToggle" type="checkbox" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <h3>Scan Configuration</h3>
-                            <p>Control how scans operate.</p>
-                        </div>
-
-                        <label class="toggle-switch">
-                            <input id="scanConfigurationToggle" type="checkbox" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="setting-row dropdown-row">
-                        <div class="setting-copy">
-                            <h3>Theme</h3>
-                            <p>Switch between dark and light mode.</p>
-                        </div>
-
-                        <div class="theme-select-wrap">
-                            <select id="themeSelect" aria-label="Theme">
-                                <option value="dark">Dark</option>
-                                <option value="light">Light</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <h3>Clear Results Automatically</h3>
-                            <p>Reset the result panel when a new scan starts.</p>
-                        </div>
-
-                        <label class="toggle-switch">
-                            <input id="clearResultsToggle" type="checkbox">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <h3>Confirmation Before Quarantine</h3>
-                            <p>Ask before quarantining a detected threat.</p>
-                        </div>
-
-                        <label class="toggle-switch">
-                            <input id="quarantineConfirmationToggle" type="checkbox">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <h3>Show Scan Summary</h3>
-                            <p>Display summary details after each scan.</p>
-                        </div>
-
-                        <label class="toggle-switch">
-                            <input id="scanSummaryToggle" type="checkbox" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="settings-actions">
-                    <button class="clear-history-button" id="clearHistoryButton">
-                        Clear Scan History
-                    </button>
-                </div>
-            </section>
-
+            </div>
         </main>
     </div>
 

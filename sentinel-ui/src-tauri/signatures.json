@@ -1,11 +1,11 @@
 {
     "signatures": {
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": {
-            "name": "Test.Trojan",
+            "name": "Trojan",
             "severity": "High"
         },
         "1111111111111111111111111111111111111111111111111111111111111111": {
-            "name": "Test.Ransomware",
+            "name": "Ransomware",
             "severity": "Critical"
         }
     }

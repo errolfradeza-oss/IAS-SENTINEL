@@ -66,6 +66,7 @@ let displayedRingProgress = 0;
 let scanInProgress = false;
 let currentMode = "quick";
 let currentThreats = [];
+let highestScanProgress = 0;
 
 const SCAN_MODES = {
     quick: {
@@ -190,8 +191,13 @@ function updateCircularProgress(percent) {
 
 }
 
+//fix scan progress
 function setScanProgress(percent, duration = 220) {
-    const target = Math.max(0, Math.min(100, percent));
+    let target = Math.max(0, Math.min(100, Number(percent) || 0));
+
+    if (scanInProgress && target < displayedRingProgress && duration !== 0) {
+        target = displayedRingProgress;
+    }
 
     if (activeRingAnimation !== null) {
         cancelAnimationFrame(activeRingAnimation);
@@ -204,11 +210,16 @@ function setScanProgress(percent, duration = 220) {
 
     function animateRing(now) {
         const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
+        const progress = duration <= 0
+            ? 1
+            : Math.min(elapsed / duration, 1);
 
-        // Ease-out for smooth movement.
         const eased = 1 - Math.pow(1 - progress, 3);
-        const current = start + difference * eased;
+        let current = start + difference * eased;
+
+        if (scanInProgress) {
+            current = Math.max(start, current);
+        }
 
         updateCircularProgress(current);
 
@@ -324,37 +335,61 @@ function setLiveSecurityStatus(status) {
 // THEME
 // ============================================================
 
-function applyTheme(theme) {
-    const selectedTheme = theme === "light" ? "light" : "dark";
 
-    document.documentElement.dataset.theme = selectedTheme;
-    document.body.dataset.theme = selectedTheme;
+const systemLightPreference = window.matchMedia(
+    "(prefers-color-scheme: light)"
+);
 
-    if (themeSelect) {
-        themeSelect.value = selectedTheme;
+const themeOptions = document.querySelectorAll("[data-theme-option]");
+
+function applyTheme(theme, savePreference = true) {
+    const preferredTheme = ["dark", "light", "system"].includes(theme)
+        ? theme
+        : "dark";
+
+    const resolvedTheme = preferredTheme === "system"
+        ? (systemLightPreference.matches ? "light" : "dark")
+        : preferredTheme;
+
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.body.dataset.theme = resolvedTheme;
+
+    updateThemeSelector(preferredTheme);
+
+    if (savePreference) {
+        localStorage.setItem(THEME_KEY, preferredTheme);
     }
+}
 
-    localStorage.setItem(THEME_KEY, selectedTheme);
+function updateThemeSelector(theme) {
+    themeOptions.forEach(button => {
+        const selected = button.dataset.themeOption === theme;
+
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-pressed", String(selected));
+    });
 }
 
 function initializeTheme() {
     const savedTheme = localStorage.getItem(THEME_KEY) || "dark";
-    applyTheme(savedTheme);
+    applyTheme(savedTheme, false);
 }
 
-if (themeSelect) {
-    themeSelect.addEventListener("change", (event) => {
-        const newTheme = event.target.value;
-        const dropdown = event.target;
+themeOptions.forEach(button => {
+    button.addEventListener("click", () => {
+        const newTheme = button.dataset.themeOption;
+        const rect = button.getBoundingClientRect();
 
-        const rect = dropdown.getBoundingClientRect();
+        // Preserve the spiral animation origin at the clicked option.
+        document.documentElement.style.setProperty(
+            "--theme-x",
+            `${rect.left + rect.width / 2}px`
+        );
 
-        // Start the reveal from the center of the dropdown
-        const x = rect.left + rect.width / 2;
-        const y = rect.top + rect.height / 2;
-
-        document.documentElement.style.setProperty("--theme-x", `${x}px`);
-        document.documentElement.style.setProperty("--theme-y", `${y}px`);
+        document.documentElement.style.setProperty(
+            "--theme-y",
+            `${rect.top + rect.height / 2}px`
+        );
 
         if (document.startViewTransition) {
             document.startViewTransition(() => applyTheme(newTheme));
@@ -362,7 +397,16 @@ if (themeSelect) {
             applyTheme(newTheme);
         }
     });
-}
+});
+
+// Follow Windows appearance changes while System Sync is selected.
+systemLightPreference.addEventListener("change", () => {
+    if (localStorage.getItem(THEME_KEY) !== "system") {
+        return;
+    }
+
+    applyTheme("system", false);
+});
 
 initializeTheme();
 
@@ -495,35 +539,42 @@ function showPage(pageName) {
         settings: settingsPage
     };
 
+    const order = ["dashboard", "quarantine", "history", "settings"];
+    const target = pages[pageName];
+    const track = document.querySelector(".page-track");
+
+    if (!target || !track) return;
+
+    const index = order.indexOf(pageName);
+    if (index < 0) return;
+
+    const currentName = order.find(name =>
+        pages[name]?.classList.contains("active")
+    );
+
+    if (currentName === pageName) return;
+
     Object.values(pages).forEach(page => {
-        if (page) {
-            page.classList.remove("active");
-            page.hidden = true;
-        }
+        if (page) page.classList.remove("active");
     });
 
-    const targetPage = pages[pageName];
-
-    if (targetPage) {
-        targetPage.hidden = false;
-        targetPage.classList.add("active");
-    }
+    target.classList.add("active");
 
     document.querySelectorAll("[data-page]").forEach(button => {
-        button.classList.toggle(
-            "active",
-            button.dataset.page === pageName
-        );
+        button.classList.toggle("active", button.dataset.page === pageName);
     });
 
-    if (pageName === "quarantine") {
-        loadQuarantine();
-    }
+    // Move the connected page track to the selected page.
+    const viewport = document.querySelector(".page-viewport");
+    const pageHeight = viewport.clientHeight;
+    track.style.transform = `translateY(-${index * pageHeight}px)`;
 
-    if (pageName === "history") {
-        renderHistory();
-    }
+    track.style.transform = `translateY(-${index * pageHeight}px)`;
+
+    if (pageName === "quarantine") loadQuarantine();
+    if (pageName === "history") renderHistory();
 }
+//helper
 
 document.querySelectorAll("[data-page]").forEach(button => {
     button.addEventListener("click", () => {
@@ -848,21 +899,43 @@ function initializeLastScanTime() {
 // RUST SCAN ENGINE
 // ============================================================
 
+
 function onScanProgress(progress) {
     if (!scanInProgress) return;
 
     if (progress.phase === "enumerating") {
         setScanLabel("PREPARING");
-        setScanSubtext(`Found ${Number(progress.done).toLocaleString()} files so far...`);
+        setScanSubtext(
+            `Found ${Number(progress.done).toLocaleString()} files so far...`
+        );
         return;
     }
 
-    setScanLabel("SCANNING");
-    setScanProgress(progress.percent, 120);
-    setScanSubtext(
-        `${Number(progress.done).toLocaleString()} of ${Number(progress.total).toLocaleString()} files · ` +
-        `${Number(progress.threats).toLocaleString()} threat(s)`
-    );
+    const reportedPercent = Number(progress.percent);
+
+    if (Number.isFinite(reportedPercent)) {
+        const nextProgress = Math.min(99, Math.max(0, reportedPercent));
+
+        if (nextProgress > highestScanProgress) {
+            highestScanProgress = nextProgress;
+            setScanProgress(highestScanProgress, 120);
+        }
+    }
+
+    if (progress.phase === "engine") {
+        setScanLabel("ANALYZING");
+        setScanSubtext(
+            progress.current || "Running detection engines..."
+        );
+    } else {
+        setScanLabel("SCANNING");
+        setScanSubtext(
+            `${Number(progress.done).toLocaleString()} of ` +
+            `${Number(progress.total).toLocaleString()} files · ` +
+            `${Number(progress.threats).toLocaleString()} threat(s)`
+        );
+    }
+
     updateScanStats(progress.done, progress.threats);
 }
 
@@ -1086,6 +1159,7 @@ async function runScanFlow(mode, path = null) {
     currentMode = mode;
     const config = SCAN_MODES[mode];
     scanInProgress = true;
+    highestScanProgress = 0;
     setScanBusy(true);
     showScanProgressView();
     if (results) results.hidden = true;
@@ -1105,7 +1179,10 @@ async function runScanFlow(mode, path = null) {
             updateScanStats(result.filesScanned, result.threatCount);
             renderScanResults(result);
             if (results) results.hidden = false;
-            setScanProgress(0, 250);
+            //fix progress bar
+            highestScanProgress = 0;
+            setScanProgress(0, 0);
+            displayedRingProgress = 0;
             setScanLabel("CANCELLED");
             setLiveSecurityStatus(result.threatCount > 0 ? "threat" : "unknown");
             setCircularMessage(
@@ -1493,6 +1570,89 @@ function initializeSettings() {
 }
 
 initializeSettings();
+
+// ============================================================
+// SCAN EXCLUSIONS
+// ============================================================
+
+const excludeFolderButton = document.querySelector("#excludeFolderButton");
+const excludeFileButton = document.querySelector("#excludeFileButton");
+const exclusionsList = document.querySelector("#exclusionsList");
+
+async function renderExclusions() {
+    if (!exclusionsList) return;
+
+    try {
+        const paths = await invoke("list_exclusions");
+
+        if (!paths.length) {
+            exclusionsList.innerHTML =
+                '<p class="exclusions-empty">No exclusions added.</p>';
+            return;
+        }
+
+        exclusionsList.innerHTML = paths.map(path => `
+            <div class="exclusion-item">
+                <span class="exclusion-path" title="${escapeHtml(path)}">
+                    ${escapeHtml(path)}
+                </span>
+                <button
+                    class="exclusion-remove"
+                    type="button"
+                    data-exclusion-path="${escapeHtml(path)}"
+                    title="Remove exclusion"
+                >REMOVE</button>
+            </div>
+        `).join("");
+    } catch (error) {
+        exclusionsList.innerHTML =
+            `<p class="exclusions-empty">${escapeHtml(errorText(error))}</p>`;
+    }
+}
+
+async function addExclusion(directory) {
+    try {
+        const path = await open({
+            multiple: false,
+            directory,
+            title: directory
+                ? "Select a folder to exclude"
+                : "Select a file to exclude"
+        });
+
+        if (!path) return;
+
+        await invoke("add_exclusion", { path });
+        await renderExclusions();
+    } catch (error) {
+        await message(errorText(error, "Could not add exclusion."), {
+            title: "Sentinel",
+            kind: "error"
+        });
+    }
+}
+
+excludeFolderButton?.addEventListener("click", () => addExclusion(true));
+excludeFileButton?.addEventListener("click", () => addExclusion(false));
+
+exclusionsList?.addEventListener("click", async event => {
+    const button = event.target.closest("[data-exclusion-path]");
+    if (!button) return;
+
+    const path = button.dataset.exclusionPath;
+
+    try {
+        await invoke("remove_exclusion", { path });
+        await renderExclusions();
+    } catch (error) {
+        await message(errorText(error, "Could not remove exclusion."), {
+            title: "Sentinel",
+            kind: "error"
+        });
+    }
+});
+
+renderExclusions();
 
 // ============================================================
 // INITIAL STATE

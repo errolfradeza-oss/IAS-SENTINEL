@@ -4,21 +4,25 @@ use std::{
     collections::HashMap,
     fmt::Write as _,
     fs::File,
-    io::Read,
+    io::{BufRead, BufReader, Read, Write},
+    process::{Command, Stdio},
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
+        mpsc,
         Arc, Mutex,
     },
     time::{Duration, Instant},
+    thread,
 };
 
 use rayon::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use tauri::{path::BaseDirectory, AppHandle, Emitter, Manager, State};
 use walkdir::{DirEntry, WalkDir};
+use crate::exclusions::{is_excluded, load_excluded_paths};
 
 const MAX_FILE_SIZE: u64 = 200 * 1024 * 1024;
 const MAX_BUF: usize = 1024 * 1024;
@@ -65,6 +69,122 @@ struct Progress {
     current: String,
 }
 
+//sha-256 cache
+
+#[derive(Default, Serialize, Deserialize)]
+struct ClamAvCache {
+    fingerprint: String,
+    entries: HashMap<String, Vec<CachedDetection>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct CachedDetection {
+    name: String,
+    severity: String,
+}
+
+fn clamav_cache_path() -> Option<PathBuf> {
+    dirs::data_local_dir().map(|dir| {
+        dir.join("Sentinel").join("clamav-cache.json")
+    })
+}
+
+fn clamav_fingerprint(
+    scanner: &Path,
+    database: &Path,
+) -> Result<String, String> {
+    let mut parts = Vec::new();
+
+    for path in std::iter::once(scanner).chain(
+        std::fs::read_dir(database)
+            .map_err(|e| format!("Cannot inspect ClamAV database: {e}"))?
+            .filter_map(Result::ok)
+            .filter(|entry| entry.path().is_file())
+            .map(|entry| entry.path())
+            .collect::<Vec<_>>()
+            .iter()
+            .map(PathBuf::as_path),
+    ) {
+        let metadata = std::fs::metadata(path)
+            .map_err(|e| format!("Cannot inspect {}: {e}", path.display()))?;
+
+        let modified = metadata
+            .modified()
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_nanos())
+            .unwrap_or(0);
+
+        parts.push(format!(
+            "{}|{}|{}",
+            path.display(),
+            metadata.len(),
+            modified
+        ));
+    }
+
+    parts.sort();
+
+    let mut hasher = Sha256::new();
+    hasher.update(parts.join("\n").as_bytes());
+
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn load_clamav_cache(path: &Path, fingerprint: &str) -> ClamAvCache {
+    std::fs::read(path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<ClamAvCache>(&bytes).ok())
+        .filter(|cache| cache.fingerprint == fingerprint)
+        .unwrap_or_else(|| ClamAvCache {
+            fingerprint: fingerprint.to_string(),
+            entries: HashMap::new(),
+        })
+}
+
+fn save_clamav_cache(path: &Path, cache: &ClamAvCache) {
+    let Some(parent) = path.parent() else {
+        return;
+    };
+
+    if std::fs::create_dir_all(parent).is_err() {
+        return;
+    }
+
+    let Ok(bytes) = serde_json::to_vec(cache) else {
+        return;
+    };
+
+    let temporary = path.with_extension("tmp");
+
+    if std::fs::write(&temporary, bytes).is_err() {
+        return;
+    }
+
+    // Keep the existing cache if replacement fails.
+    if path.exists() && std::fs::remove_file(path).is_err() {
+        let _ = std::fs::remove_file(temporary);
+        return;
+    }
+
+    if std::fs::rename(&temporary, path).is_err() {
+        let _ = std::fs::remove_file(temporary);
+    }
+}
+
+//added fix
+fn keep_progress_monotonic(
+    tracker: &Arc<Mutex<f64>>,
+    proposed: f64,
+) -> f64 {
+    let mut highest = tracker
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+    *highest = highest.max(proposed.clamp(0.0, 99.0));
+    *highest
+}
+
 #[tauri::command]
 pub async fn start_scan(
     app: AppHandle,
@@ -75,16 +195,21 @@ pub async fn start_scan(
     if state.running.swap(true, Ordering::SeqCst) {
         return Err("A scan is already running.".into());
     }
+
     state.cancel.store(false, Ordering::SeqCst);
 
     let cancel = state.cancel.clone();
     let handle = app.clone();
-    let outcome = tauri::async_runtime::spawn_blocking(move || run_scan(handle, mode, path, cancel))
-        .await
-        .map_err(|error| format!("Scan thread failed: {error}"))
-        .and_then(|result| result);
+
+    let outcome = tauri::async_runtime::spawn_blocking(move || {
+        run_scan(handle, mode, path, cancel)
+    })
+    .await
+    .map_err(|error| format!("Scan thread failed: {error}"))
+    .and_then(|result| result);
 
     state.running.store(false, Ordering::SeqCst);
+
     outcome
 }
 
@@ -100,7 +225,9 @@ fn run_scan(
     cancel: Arc<AtomicBool>,
 ) -> Result<ScanResult, String> {
     let started = Instant::now();
+    let progress_percent = Arc::new(Mutex::new(0.0_f64));
     let signatures = load_signatures(&app)?;
+    let exclusions = load_excluded_paths(&app)?;
 
     let (roots, only_risky): (Vec<(PathBuf, usize)>, bool) = match mode.as_str() {
         "quick" => (quick_roots(), true),
@@ -123,6 +250,11 @@ fn run_scan(
         if cancel.load(Ordering::Relaxed) {
             break;
         }
+
+        if is_excluded(root, &exclusions) {
+            continue;
+        }
+
         if root.is_file() {
             files.push(root.clone());
             continue;
@@ -132,13 +264,20 @@ fn run_scan(
             .max_depth(*max_depth)
             .follow_links(false)
             .into_iter()
-            .filter_entry(|entry| !skip_dir(entry));
+            .filter_entry(|entry| {
+                !skip_dir(entry) && !is_excluded(entry.path(), &exclusions)
+            });
 
         for entry in walker {
             if cancel.load(Ordering::Relaxed) {
                 break 'roots;
             }
             let Ok(entry) = entry else { continue };
+
+            if is_excluded(entry.path(), &exclusions) {
+                continue;
+            }
+
             if !entry.file_type().is_file() {
                 continue;
             }
@@ -169,6 +308,11 @@ fn run_scan(
     let skipped = AtomicUsize::new(0);
     let threat_total = AtomicUsize::new(0);
     let threats: Mutex<Vec<Threat>> = Mutex::new(Vec::new());
+
+    //sha 256 cache
+    let file_hashes: Mutex<HashMap<PathBuf, String>> =
+    Mutex::new(HashMap::new());
+
     let emit_gate = Mutex::new(Instant::now());
 
     let workers = std::thread::available_parallelism()
@@ -187,6 +331,11 @@ fn run_scan(
 
             match hash_file(file, &cancel) {
                 Ok(Some(hash)) => {
+                    //sha 256 cache
+                    if let Ok(mut hashes) = file_hashes.lock() {
+                        hashes.insert(file.clone(), hash.clone());
+                    }
+                    //def
                     if let Some(signature) = signatures.get(&hash) {
                         threat_total.fetch_add(1, Ordering::Relaxed);
                         if let Ok(mut list) = threats.lock() {
@@ -214,7 +363,10 @@ fn run_scan(
                             phase: "scanning",
                             done: finished,
                             total,
-                            percent: finished as f64 / total.max(1) as f64 * 100.0,
+                            percent: keep_progress_monotonic(
+                                &progress_percent,
+                                finished as f64 / total.max(1) as f64 * 90.0,
+                            ),
                             threats: threat_total.load(Ordering::Relaxed),
                             current: file.to_string_lossy().into_owned(),
                         },
@@ -224,10 +376,82 @@ fn run_scan(
         });
     });
 
-    let cancelled = cancel.load(Ordering::Relaxed);
-    let mut threats = threats.into_inner().unwrap_or_default();
-    threats.sort_by(|left, right| left.path.cmp(&right.path));
+    //sha 256 cache
+    let file_hashes = file_hashes.into_inner().unwrap_or_default();
 
+    //added
+    let mut threats = threats.into_inner().unwrap_or_default();
+    let mut engine_errors: Vec<String> = Vec::new();
+
+    
+    // Run ClamAV and YARA concurrently.
+    let clamav_app = app.clone();
+    let clamav_files = files.clone();
+    //sha 256 cache
+    let clamav_hashes = file_hashes;
+    let clamav_cancel = cancel.clone();
+    let clamav_progress = progress_percent.clone();
+    let clamav_base_threats = threats.len();
+
+    let yara_app = app.clone();
+    let yara_files = files.clone();
+    let yara_cancel = cancel.clone();
+    let yara_progress = progress_percent.clone();
+    let yara_base_threats = threats.len();
+
+    let clamav_thread = thread::spawn(move || {
+        if clamav_cancel.load(Ordering::Relaxed) {
+            return Ok(Vec::new());
+        }
+
+        run_clamav(
+            &clamav_app,
+            &clamav_hashes,
+            &clamav_files,
+            &clamav_cancel,
+            clamav_base_threats,
+            &clamav_progress,
+        )
+    });
+
+    let yara_thread = thread::spawn(move || {
+        if yara_cancel.load(Ordering::Relaxed) {
+            return Ok(Vec::new());
+        }
+
+        run_yara(
+            &yara_app,
+            &yara_files,
+            &yara_cancel,
+            yara_base_threats,
+            &yara_progress,
+        )
+    });
+
+    // Wait for both engines and merge their detections.
+    match clamav_thread.join() {
+        Ok(Ok(mut found)) => threats.append(&mut found),
+        Ok(Err(error)) => engine_errors.push(error),
+        Err(_) => engine_errors.push("ClamAV worker thread panicked.".into()),
+    }
+
+    match yara_thread.join() {
+        Ok(Ok(mut found)) => threats.append(&mut found),
+        Ok(Err(error)) => engine_errors.push(error),
+        Err(_) => engine_errors.push("YARA worker thread panicked.".into()),
+    }
+
+    threats.sort_by(|a, b| {
+        a.path.cmp(&b.path).then_with(|| a.name.cmp(&b.name))
+    });
+
+    let cancelled = cancel.load(Ordering::Relaxed);
+
+    for error in &engine_errors {
+        eprintln!("[Sentinel scan engine] {error}");
+    }
+
+//end added
     let files_skipped = skipped.load(Ordering::Relaxed);
     let finished = done.load(Ordering::Relaxed);
 
@@ -485,3 +709,572 @@ fn load_signatures(app: &AppHandle) -> Result<HashMap<String, Sig>, String> {
     }
     Ok(signatures)
 }
+
+//helper func
+
+fn find_yara_script() -> Option<PathBuf> {
+    let mut candidates = Vec::new();
+
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join("yara_scan.py"));
+        candidates.push(cwd.join("sentinel-ui/src-tauri/yara_scan.py"));
+    }
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("yara_scan.py"));
+            candidates.push(dir.join("src-tauri/yara_scan.py"));
+        }
+    }
+
+    candidates.into_iter().find(|p| p.is_file())
+}
+
+//fn add engine
+
+fn add_engine_threat(
+    output: &mut Vec<Threat>,
+    path: String,
+    name: String,
+    severity: String,
+    engine: &str,
+    cancel: &AtomicBool,
+) {
+    if cancel.load(Ordering::Relaxed) {
+        return;
+    }
+
+    let full_name = format!("{engine}: {name}");
+
+    // Check for duplicates before doing additional file I/O.
+    if output
+        .iter()
+        .any(|threat| threat.path == path && threat.name == full_name)
+    {
+        return;
+    }
+
+    let sha256 = hash_file(Path::new(&path), cancel)
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+
+    if cancel.load(Ordering::Relaxed) {
+        return;
+    }
+
+    output.push(Threat {
+        path,
+        name: full_name,
+        severity,
+        sha256,
+    });
+}
+
+//cancellable clamav scan
+
+fn run_command_cancellable(
+    mut command: Command,
+    input: Option<&[u8]>,
+    cancel: &AtomicBool,
+    engine: &str,
+    app: &AppHandle,
+    total_files: usize,
+    percent_start: f64,
+    percent_span: f64,
+    base_threats: usize,
+    progress_percent: &Arc<Mutex<f64>>,
+) -> Result<std::process::Output, String> {
+    command
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let mut child = command
+        .spawn()
+        .map_err(|e| format!("Could not launch {engine}: {e}"))?;
+
+    let stdin = child.stdin.take();
+    let stdout = child.stdout.take()
+        .ok_or_else(|| format!("{engine}: stdout unavailable"))?;
+    let stderr = child.stderr.take()
+        .ok_or_else(|| format!("{engine}: stderr unavailable"))?;
+
+    // Forward output lines to the main thread as soon as they arrive.
+    let (tx, rx) = mpsc::channel::<(bool, Vec<u8>)>();
+
+    let stdout_tx = tx.clone();
+    let stdout_reader = std::thread::spawn(move || {
+        let mut reader = BufReader::new(stdout);
+
+        loop {
+            let mut line = Vec::new();
+
+            match reader.read_until(b'\n', &mut line) {
+                Ok(0) => break,
+                Ok(_) => {
+                    if stdout_tx.send((false, line)).is_err() {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+    });
+
+    let stderr_reader = std::thread::spawn(move || {
+        let mut reader = BufReader::new(stderr);
+
+        loop {
+            let mut line = Vec::new();
+
+            match reader.read_until(b'\n', &mut line) {
+                Ok(0) => break,
+                Ok(_) => {
+                    if tx.send((true, line)).is_err() {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+    });
+
+    // Send the JSON file list to the YARA script.
+    if let Some(data) = input {
+        if let Some(mut pipe) = stdin {
+            if let Err(error) = pipe.write_all(data) {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = stdout_reader.join();
+                let _ = stderr_reader.join();
+
+                return Err(format!("{engine}: input failed: {error}"));
+            }
+        }
+    }
+
+    let mut stdout_bytes = Vec::new();
+    let mut stderr_bytes = Vec::new();
+    let mut engine_done = 0usize;
+    let mut status = None;
+
+    loop {
+        if cancel.load(Ordering::Relaxed) && status.is_none() {
+            let _ = child.kill();
+            status = Some(
+                child.wait()
+                    .map_err(|e| format!("{engine}: could not stop process: {e}"))?
+            );
+        }
+
+        match rx.recv_timeout(Duration::from_millis(50)) {
+            Ok((is_stderr, line)) => {
+                if is_stderr {
+                    stderr_bytes.extend_from_slice(&line);
+                } else {
+                    stdout_bytes.extend_from_slice(&line);
+                }
+
+                let line_text = String::from_utf8_lossy(&line);
+                let trimmed = line_text.trim();
+
+                // YARA emits machine-readable progress on stderr.
+                if engine == "YARA" && is_stderr {
+                    if let Ok(message) = serde_json::from_str::<Value>(trimmed) {
+                        if message.get("type").and_then(Value::as_str)
+                            == Some("progress")
+                        {
+                            let done = message
+                                .get("done")
+                                .and_then(Value::as_u64)
+                                .unwrap_or(0) as usize;
+
+                            let total = message
+                                .get("total")
+                                .and_then(Value::as_u64)
+                                .unwrap_or(total_files as u64) as usize;
+
+                            let percent = percent_start
+                                + (done.min(total.max(1)) as f64
+                                    / total.max(1) as f64)
+                                    * percent_span;
+
+                            let _ = app.emit(
+                                "scan-progress",
+                                Progress {
+                                    phase: "engine",
+                                    done: total_files,
+                                    total: total_files,
+                                    percent: keep_progress_monotonic(progress_percent, percent),
+                                    threats: base_threats,
+                                    current: format!(
+                                        "YARA: {done}/{total} files analyzed"
+                                    ),
+                                },
+                            );
+                        }
+                    }
+                }
+
+                // ClamAV normally reports each scanned file as ": OK"
+                // or ": <detection> FOUND".
+                if engine == "ClamAV" && !is_stderr {
+                    let is_file_result =
+                        trimmed.ends_with(": OK")
+                        || trimmed.ends_with(" FOUND");
+
+                    if is_file_result {
+                        engine_done = (engine_done + 1).min(total_files);
+
+                        let percent = percent_start
+                            + (engine_done as f64
+                                / total_files.max(1) as f64)
+                                * percent_span;
+
+                        let _ = app.emit(
+                            "scan-progress",
+                            Progress {
+                                phase: "engine",
+                                done: total_files,
+                                total: total_files,
+                                percent: keep_progress_monotonic(progress_percent, percent),
+                                threats: base_threats,
+                                current: format!(
+                                    "ClamAV: {engine_done}/{total_files} files analyzed"
+                                ),
+                            },
+                        );
+                    }
+                }
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                if status.is_some() {
+                    break;
+                }
+            }
+        }
+
+        if status.is_none() {
+            match child.try_wait() {
+                Ok(Some(exit_status)) => status = Some(exit_status),
+                Ok(None) => {}
+                Err(error) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = stdout_reader.join();
+                    let _ = stderr_reader.join();
+
+                    return Err(format!("{engine}: process wait failed: {error}"));
+                }
+            }
+        }
+    }
+
+    let _ = stdout_reader.join();
+    let _ = stderr_reader.join();
+
+    Ok(std::process::Output {
+        status: status.ok_or_else(|| format!("{engine}: missing exit status"))?,
+        stdout: stdout_bytes,
+        stderr: stderr_bytes,
+    })
+}
+
+//clamAV
+fn run_clamav(
+    app: &AppHandle,
+    hashes: &HashMap<PathBuf, String>,
+    files: &[PathBuf],
+    cancel: &AtomicBool,
+    base_threats: usize,
+    progress_percent: &Arc<Mutex<f64>>,
+) -> Result<Vec<Threat>, String> {
+    if files.is_empty() || cancel.load(Ordering::Relaxed) {
+        return Ok(Vec::new());
+    }
+
+    let scanner = PathBuf::from(
+        r"C:\Program Files\ClamAV\clamscan.exe"
+    );
+    let database = PathBuf::from(r"C:\ProgramData\ClamAV\db");
+
+    if !scanner.is_file() {
+        return Err(format!("ClamAV executable not found: {}", scanner.display()));
+    }
+    if !database.is_dir() {
+        return Err(format!("ClamAV database directory not found: {}", database.display()));
+    }
+
+    //sha 256 cache    
+    let fingerprint = clamav_fingerprint(&scanner, &database)?;
+    let cache_path = clamav_cache_path()
+        .ok_or("Could not locate the local application data directory.")?;
+
+    let mut cache = load_clamav_cache(&cache_path, &fingerprint);
+    let mut uncached_files: Vec<PathBuf> = Vec::new();
+    let mut cached_threats = Vec::new();
+
+    for file in files {
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(cached_threats);
+        }
+
+        let Some(hash) = hashes.get(file) else {
+            uncached_files.push(file.clone());
+            continue;
+        };
+
+        if let Some(detections) = cache.entries.get(hash) {
+            for detection in detections {
+                cached_threats.push(Threat {
+                    path: file.to_string_lossy().into_owned(),
+                    name: format!("ClamAV: {}", detection.name),
+                    severity: detection.severity.clone(),
+                    sha256: hash.clone(),
+                });
+            }
+        } else {
+            uncached_files.push(file.clone());
+        }
+    }
+
+    if uncached_files.is_empty() {
+        return Ok(cached_threats);
+    }
+
+
+    let list_path = std::env::temp_dir().join(format!(
+        "sentinel-file-list-{}.txt",
+        uuid::Uuid::new_v4()
+    ));
+
+    let result = (|| -> Result<Vec<Threat>, String> {
+        {
+            let mut list = File::create(&list_path)
+                .map_err(|e| format!("Could not create ClamAV file list: {e}"))?;
+
+            for file in &uncached_files {
+                if cancel.load(Ordering::Relaxed) {
+                    return Ok(Vec::new());
+                }
+
+                let path = file.to_string_lossy();
+                if path.contains('\n') || path.contains('\r') {
+                    continue;
+                }
+
+                writeln!(list, "{path}")
+                    .map_err(|e| format!("Could not write ClamAV file list: {e}"))?;
+            }
+        }
+
+        
+        let mut command = Command::new(&scanner);
+
+        command
+            .arg(format!("--database={}", database.display()))
+            .arg(format!("--file-list={}", list_path.display()))
+            .arg("--no-summary");
+
+        let output = run_command_cancellable(
+            command,
+            None,
+            cancel,
+            "ClamAV",
+            app,
+            uncached_files.len(),
+            90.0,
+            4.5,
+            base_threats,
+            progress_percent,
+        )?;
+
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(Vec::new());
+        }
+
+        // clamscan exit code 1 means detections were found.
+        if !output.status.success()
+            && output.status.code() != Some(1)
+        {
+            return Err(format!(
+                "ClamAV failed ({}): {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+
+        let text = String::from_utf8_lossy(&output.stdout);
+        let mut threats = Vec::new();
+
+        for line in text.lines() {
+            if cancel.load(Ordering::Relaxed) {
+                break;
+            }
+
+            let Some((path, detection)) = line.split_once(": ") else {
+                continue;
+            };
+
+            let Some(name) = detection.strip_suffix(" FOUND") else {
+                continue;
+            };
+
+            add_engine_threat(
+                &mut threats,
+                path.to_string(),
+                name.to_string(),
+                "High".into(),
+                "ClamAV",
+                cancel,
+            );
+        }
+
+        Ok(threats)
+    })();
+
+    //let _ = std::fs::remove_file(&list_path);
+    //result
+
+    //sha 256 cache
+    
+    let _ = std::fs::remove_file(&list_path);
+
+    match result {
+        Ok(mut found) => {
+            if !cancel.load(Ordering::Relaxed) {
+                // Record clean results for all files submitted successfully.
+                for file in &uncached_files {
+                    if let Some(hash) = hashes.get(file) {
+                        cache.entries.insert(hash.clone(), Vec::new());
+                    }
+                }
+
+                // Replace clean entries with the detections found.
+                for threat in &found {
+                    if let Some(hash) = hashes.get(Path::new(&threat.path)) {
+                        let name = threat
+                            .name
+                            .strip_prefix("ClamAV: ")
+                            .unwrap_or(&threat.name)
+                            .to_string();
+
+                        cache.entries
+                            .entry(hash.clone())
+                            .or_default()
+                            .push(CachedDetection {
+                                name,
+                                severity: threat.severity.clone(),
+                            });
+                    }
+                }
+
+                save_clamav_cache(&cache_path, &cache);
+            }
+
+            cached_threats.append(&mut found);
+            Ok(cached_threats)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+//fn yara
+fn run_yara(
+    app: &AppHandle,
+    files: &[PathBuf],
+    cancel: &AtomicBool,
+    base_threats: usize,
+    progress_percent: &Arc<Mutex<f64>>,
+) -> Result<Vec<Threat>, String> {
+    if files.is_empty() || cancel.load(Ordering::Relaxed) {
+        return Ok(Vec::new());
+    }
+
+    let script = find_yara_script()
+        .ok_or("Could not locate yara_scan.py.")?;
+
+    let paths: Vec<String> = files
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect();
+
+    let input = serde_json::to_vec(&paths)
+        .map_err(|e| format!("Could not prepare YARA input: {e}"))?;
+
+    
+    let mut command = Command::new("python");
+    command.arg(&script);
+
+    let output = run_command_cancellable(
+        command,
+        Some(&input),
+        cancel,
+        "YARA",
+        app,
+        files.len(),
+        90.0,
+        9.0,
+        base_threats,
+        progress_percent,
+    )?;
+
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(Vec::new());
+    }
+
+
+    if !output.status.success() {
+        return Err(format!(
+            "YARA bridge failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+
+    let response: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| format!("Invalid YARA response: {e}"))?;
+
+    if let Some(error) = response.get("error").and_then(Value::as_str) {
+        return Err(format!("YARA: {error}"));
+    }
+
+    let mut threats = Vec::new();
+
+    if let Some(detections) = response.get("detections").and_then(Value::as_array) {
+        for detection in detections {
+            if cancel.load(Ordering::Relaxed) {
+                break;
+            }
+
+            let Some(path) = detection.get("path").and_then(Value::as_str) else {
+                continue;
+            };
+            let Some(name) = detection.get("name").and_then(Value::as_str) else {
+                continue;
+            };
+
+            let severity = detection
+                .get("severity")
+                .and_then(Value::as_str)
+                .unwrap_or("Medium");
+
+            add_engine_threat(
+                &mut threats,
+                path.to_string(),
+                name.to_string(),
+                severity.to_string(),
+                "YARA",
+                cancel,
+            );
+        }
+    }
+
+    Ok(threats)
+}
+
