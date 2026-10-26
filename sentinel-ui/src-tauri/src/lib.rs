@@ -6,10 +6,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(scanner::ScanState::default())
+        .manage(scanner::ScanState::default())     
         .invoke_handler(tauri::generate_handler![
             scanner::start_scan,
             scanner::cancel_scan,
+            scanner::pause_scan,
+            scanner::resume_scan,
             quarantine::quarantine_threat,
             quarantine::delete_detected_file,
             quarantine::list_quarantine,
@@ -22,6 +24,7 @@ pub fn run() {
             exclusions::add_exclusion,
             exclusions::remove_exclusion
         ])
+
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -60,6 +60,13 @@ fn validate_id(id: &str) -> Result<(), String> {
         .map_err(|_| "Invalid quarantine id.".to_string())
 }
 
+//helper
+
+fn is_valid_sha256(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+
 fn now() -> String {
     Utc::now().to_rfc3339()
 }
@@ -214,14 +221,21 @@ pub fn quarantine_threat(
     let computed = xor_copy(&src, &data_path, true).map_err(|error| {
         let _ = fs::remove_file(&data_path);
         format!("Could not copy file (in use or no permission): {error}")
-    })?;
+            })?;
 
-    if let Some(expected) = sha256.as_deref().filter(|value| !value.is_empty()) {
-        if !expected.eq_ignore_ascii_case(&computed) {
-            let _ = fs::remove_file(&data_path);
-            return Err("File changed since the scan; it was not quarantined.".into());
-        }
-    }
+            
+            let Some(expected) = sha256
+                .as_deref()
+                .filter(|value| is_valid_sha256(value))
+            else {
+                let _ = fs::remove_file(&data_path);
+                return Err("A valid SHA-256 scan hash is required for quarantine.".into());
+            };
+
+            if !expected.eq_ignore_ascii_case(&computed) {
+                let _ = fs::remove_file(&data_path);
+                return Err("File changed since the scan; it was not quarantined.".into());
+            }
 
     let entry = QuarantineEntry {
         id: id.clone(),

@@ -18,6 +18,8 @@ const scanSubtext = document.querySelector("#scanSubtext");
 const scanOptions = document.querySelector(".scan-options");
 const scanSession = document.querySelector("#scanSession");
 const modeScanButton = document.querySelector("#modeScanButton");
+const pauseScanButton = document.querySelector("#pauseScanButton");
+const cancelScanButton = document.querySelector("#cancelScanButton");
 const backToScanOptionsButton = document.querySelector("#backToScanOptions");
 const scanRingPanel = document.querySelector(".scan-ring-panel");
 const scanAnotherButton = document.querySelector("#scanAnotherButton");
@@ -585,16 +587,23 @@ document.querySelectorAll("[data-page]").forEach(button => {
 function setModeButton(state) {
     if (!modeScanButton) return;
 
-    const running = state === "running";
-    modeScanButton.disabled = state === "cancelling";
-    modeScanButton.classList.toggle("is-cancel", running);
+    const busy = state === "running" || state === "cancelling";
 
-    if (state === "running") {
-        modeScanButton.textContent = "CANCEL SCAN";
-    } else if (state === "cancelling") {
+    modeScanButton.disabled = state === "cancelling";
+    modeScanButton.classList.toggle("is-cancel", busy);
+
+    if (state === "cancelling") {
         modeScanButton.textContent = "CANCELLING...";
+    } else if (state === "running") {
+        modeScanButton.textContent = "CANCEL SCAN";
     } else {
-        modeScanButton.textContent = `START ${SCAN_MODES[currentMode].label.toUpperCase()}`;
+        modeScanButton.textContent =
+            `START ${SCAN_MODES[currentMode].label.toUpperCase()}`;
+    }
+
+    if (pauseScanButton) {
+        pauseScanButton.hidden = !busy;
+        pauseScanButton.disabled = !busy || state === "cancelling";
     }
 }
 
@@ -651,18 +660,32 @@ scanAnotherButton?.addEventListener("click", async () => {
 });
 
 modeScanButton?.addEventListener("click", async () => {
+    // If a scan is running, this button cancels it.
     if (scanInProgress) {
+        if (scanCancelling) return;
+
+        scanCancelling = true;
         setModeButton("cancelling");
+
         try {
             await invoke("cancel_scan");
         } catch (error) {
-            console.warn("Cancel failed:", error);
+            console.error("Cancel failed:", error);
+
+            scanCancelling = false;
             setModeButton("running");
         }
+
         return;
     }
 
-    runScanFlow(currentMode, currentMode === "custom" ? selectedFolder : null);
+    // Otherwise, start a new scan.
+    scanCancelling = false;
+
+    await runScanFlow(
+        currentMode,
+        currentMode === "custom" ? selectedFolder : null
+    );
 });
 
 // Support existing sidebar buttons if they use IDs instead.
@@ -813,9 +836,25 @@ function renderScanResults(result) {
                   threat.reason ??
                   "Potential threat";
 
-            const severity = !isText && threat !== null
-                ? threat.severity ?? "Unknown"
-                : "Unknown";
+            //const severity = !isText && threat !== null
+            //    ? threat.severity ?? "Unknown"
+            //    : "Unknown";
+
+            const severity = classifyThreatSeverity(
+                !isText && threat !== null ? threat.severity : "Unknown"
+            );
+
+            const autoQuarantined =
+                !isText && threat.quarantine_status === "quarantined";
+
+            const quarantineFailed =
+                !isText && threat.quarantine_status === "failed";
+
+            const quarantineMessage = autoQuarantined
+                ? "Automatically quarantined based on threat detection and severity."
+                : quarantineFailed
+                    ? `Automatic quarantine failed: ${escapeHtml(threat.quarantine_error ?? "Unknown error")}`
+                    : "";
             const severityClass = String(severity).toLowerCase().replace(/[^a-z]/g, "");
             const pathParts = String(path).split(/[\\/]/).filter(Boolean);
             const location = pathParts.length > 1
@@ -833,8 +872,13 @@ function renderScanResults(result) {
                         <span class="severity-pill severity-${escapeHtml(severityClass)}">${escapeHtml(severity)}</span>
                     </div>
                     <div class="threat-card-divider"></div>
-                    <p class="threat-action-prompt">Choose an action for this file</p>
-                    <div class="threat-card-actions">
+                    <p class="threat-action-prompt">${
+                        autoQuarantined
+                            ? ""
+                           //? "Automatically quarantined after a confirmed signature match."
+                            : "Choose an action for this file"
+                    }</p>
+                    <div class="threat-card-actions" ${autoQuarantined ? "hidden" : ""}>
                         <button class="threat-action-button quarantine-threat-button" type="button" data-threat-action="quarantine">
                             <span class="threat-action-icon" aria-hidden="true">⛨</span>
                             <span>Quarantine</span>
@@ -848,7 +892,13 @@ function renderScanResults(result) {
                             <span>Allow</span>
                         </button>
                     </div>
-                    <p class="threat-action-feedback" role="status" hidden></p>
+                    <p
+                        class="threat-action-feedback"
+                        role="status"
+                        ${autoQuarantined || quarantineFailed ? "" : "hidden"}
+                    >
+                        ${escapeHtml(quarantineMessage)}
+                    </p>
                 </article>
             `;
         }).join("")}
@@ -1133,7 +1183,22 @@ function setScanBusy(busy) {
         scanButton.disabled = busy;
         scanButton.textContent = busy ? "SCANNING..." : "Custom Scan";
     }
-    if (backToScanOptionsButton) backToScanOptionsButton.disabled = busy;
+
+    if (backToScanOptionsButton) {
+        backToScanOptionsButton.disabled = false;
+    }
+
+    if (!busy) {
+        scanPaused = false;
+        scanCancelling = false;
+
+        if (pauseScanButton) {
+            pauseScanButton.textContent = "⏸";
+            pauseScanButton.setAttribute("aria-label", "Pause scan");
+            pauseScanButton.title = "Pause scan";
+        }
+    }
+
     setModeButton(busy ? "running" : "idle");
 }
 
@@ -1175,6 +1240,56 @@ async function runScanFlow(mode, path = null) {
 
         const result = await runScan(mode, path);
 
+        // Automatically quarantine Severe threats from confirmed detections.
+        if (Array.isArray(result.threats)) {
+            let quarantinedCount = 0;
+
+            for (const threat of result.threats) {
+                if (!threat || typeof threat !== "object") continue;
+
+                const severity = classifyThreatSeverity(threat.severity);
+
+                // Only automatically quarantine Severe detections.
+                if (!["Severe", "High"].includes(severity)) continue;
+
+                // Only accept detections from recognized engines.
+                const source = String(threat.detection_source ?? "")
+                    .trim()
+                    .toLowerCase();
+
+                if (!["sha256-signature", "clamav", "yara"].includes(source)) {
+                    continue;
+                }
+
+                try {
+                    await invoke("quarantine_threat", {
+                        path: threat.path,
+                        name: threat.name,
+                        severity,
+                        sha256: threat.sha256
+                    });
+
+                    threat.quarantine_status = "quarantined";
+                    quarantinedCount++;
+                } catch (error) {
+                    console.error(
+                        "Automatic quarantine failed:",
+                        threat.path,
+                        error
+                    );
+
+                    threat.quarantine_status = "failed";
+                    threat.quarantine_error = errorText(error);
+                }
+            }
+
+            result.quarantinedCount = quarantinedCount;
+
+            if (quarantinedCount > 0) {
+                await loadQuarantine();
+            }
+        }
+        //basic
         if (result.cancelled) {
             updateScanStats(result.filesScanned, result.threatCount);
             renderScanResults(result);
@@ -1248,6 +1363,7 @@ async function runScanFlow(mode, path = null) {
         playScanSound(false);
     } finally {
         scanInProgress = false;
+        scanCancelling = false;
         setScanBusy(false);
     }
 }
@@ -1282,70 +1398,214 @@ async function handleCustomScan() {
 
 scanButton?.addEventListener("click", handleCustomScan);
 
-// ============================================================
-// QUARANTINE TNGINA busseng!!
-// ============================================================
+// HELPER 
+function classifyThreatSeverity(value) {
+    const severity = String(value ?? "").trim().toLowerCase();
+
+    if (["critical", "severe"].includes(severity)) {
+        return "Severe";
+    }
+
+    if (["high", "high risk"].includes(severity)) {
+        return "High";
+    }
+
+    if (["medium", "moderate", "suspicious"].includes(severity)) {
+        return "Suspicious";
+    }
+
+    if (["low", "minor"].includes(severity)) {
+        return "Minor";
+    }
+
+    return "Unknown";
+}
+
+
+/* ============================================================
+   QUARANTINE MANAGEMENT
+   ============================================================ */
+
+let quarantineItems = [];
+const selectedQuarantineIds = new Set();
 
 function setDeleteAllEnabled(enabled) {
     const button = document.querySelector("#deleteAllQuarantine");
+    if (button) button.disabled = !enabled;
+}
 
-    if (button) {
-        button.disabled = !enabled;
+function updateQuarantineSelectionUI() {
+    const selectedCount = document.querySelector("#quarantineSelectedCount");
+    const restoreButton = document.querySelector("#restoreSelectedQuarantine");
+    const deleteButton = document.querySelector("#deleteSelectedQuarantine");
+    const selectAll = document.querySelector("#quarantineSelectAll");
+
+    const visibleCheckboxes = [
+        ...document.querySelectorAll(".quarantine-select-item")
+    ];
+
+    const visibleIds = visibleCheckboxes.map(box => box.value);
+    const selectedVisible = visibleIds.filter(id =>
+        selectedQuarantineIds.has(id)
+    ).length;
+
+    if (selectedCount) {
+        selectedCount.textContent =
+            `${selectedQuarantineIds.size} selected`;
     }
+
+    if (restoreButton) {
+        restoreButton.disabled = selectedQuarantineIds.size === 0;
+    }
+
+    if (deleteButton) {
+        deleteButton.disabled = selectedQuarantineIds.size === 0;
+    }
+
+    if (selectAll) {
+        selectAll.checked =
+            visibleIds.length > 0 &&
+            selectedVisible === visibleIds.length;
+
+        selectAll.indeterminate =
+            selectedVisible > 0 &&
+            selectedVisible < visibleIds.length;
+    }
+}
+
+function renderQuarantineItems() {
+    const container = document.querySelector("#quarantineList");
+    const searchInput = document.querySelector("#quarantineSearch");
+    const severityFilter = document.querySelector("#quarantineSeverityFilter");
+
+    if (!container) return;
+
+    const query = String(searchInput?.value ?? "").trim().toLowerCase();
+    const selectedSeverity = severityFilter?.value ?? "all";
+
+    const filtered = quarantineItems.filter(item => {
+        const severity = classifyThreatSeverity(item.severity);
+
+        const matchesSeverity =
+            selectedSeverity === "all" ||
+            severity === selectedSeverity;
+
+        const searchableText = [
+            item.file_name,
+            item.original_path,
+            item.detection_name
+        ].join(" ").toLowerCase();
+
+        return matchesSeverity && searchableText.includes(query);
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="quarantine-empty">
+                <div class="quarantine-empty-icon">✓</div>
+                <h3>${quarantineItems.length === 0
+                    ? "Quarantine is empty"
+                    : "No matching files"}</h3>
+                <p>${quarantineItems.length === 0
+                    ? "Sentinel hasn't isolated any files."
+                    : "Try a different search or severity filter."}</p>
+            </div>`;
+
+        updateQuarantineSelectionUI();
+        return;
+    }
+
+    container.innerHTML = filtered.map(item => {
+        const severity = classifyThreatSeverity(item.severity);
+        const checked = selectedQuarantineIds.has(item.id) ? "checked" : "";
+
+        return `
+            <div class="result-item quarantine-item">
+                <label class="quarantine-item-select"
+                       aria-label="Select ${escapeHtml(item.file_name)}">
+                    <input
+                        type="checkbox"
+                        class="quarantine-select-item"
+                        value="${escapeHtml(item.id)}"
+                        ${checked}>
+                </label>
+
+                <div class="quarantine-file-icon">!</div>
+
+                <div class="quarantine-file-info">
+                    <div class="quarantine-file-name">
+                        ${escapeHtml(item.file_name)}
+                    </div>
+                    <div class="quarantine-file-path"
+                         title="${escapeHtml(item.original_path)}">
+                        ${escapeHtml(item.original_path)}
+                    </div>
+                </div>
+
+                <div class="quarantine-detection">
+                    <div class="detection-label">DETECTION</div>
+                    <div class="detection-name">
+                        ${escapeHtml(item.detection_name)}
+                    </div>
+                </div>
+
+                <div class="quarantine-severity">
+                    <span class="severity-badge severity-${severity.toLowerCase()}">
+                        ${escapeHtml(severity.toUpperCase())}
+                    </span>
+                </div>
+
+                <div class="quarantine-actions">
+                    <button
+                        type="button"
+                        class="quarantine-action restore-button"
+                        data-quarantine-action="restore"
+                        data-quarantine-id="${escapeHtml(item.id)}">
+                        Restore
+                    </button>
+
+                    <button
+                        type="button"
+                        class="quarantine-action delete-button"
+                        data-quarantine-action="delete"
+                        data-quarantine-id="${escapeHtml(item.id)}">
+                        Delete
+                    </button>
+                </div>
+            </div>`;
+    }).join("");
+
+    updateQuarantineSelectionUI();
 }
 
 async function loadQuarantine() {
     const container = document.querySelector("#quarantineList");
     if (!container) return;
+
     setDeleteAllEnabled(false);
 
     try {
         const items = await invoke("list_quarantine");
 
-        const countEl = document.querySelector("#quarantineCount");
-        if (countEl) countEl.textContent = items.length;
-        setDeleteAllEnabled(items.length > 0);
+        quarantineItems = Array.isArray(items) ? items : [];
 
-        if (items.length === 0) {
-            container.innerHTML = `
-                <div class="quarantine-empty">
-                    <div class="quarantine-empty-icon">✓</div>
-                    <h3>Quarantine is empty</h3>
-                    <p>Sentinel hasn't isolated any files.</p>
-                </div>`;
-            return;
+        // Remove selections for items that no longer exist.
+        const currentIds = new Set(quarantineItems.map(item => item.id));
+
+        for (const id of selectedQuarantineIds) {
+            if (!currentIds.has(id)) {
+                selectedQuarantineIds.delete(id);
+            }
         }
 
-        container.innerHTML = items.map(item => `
-                <div class="result-item quarantine-item">
-                    <div class="quarantine-file-icon">!</div>
-                    <div class="quarantine-file-info">
-                        <div class="quarantine-file-name">${escapeHtml(item.file_name)}</div>
-                        <div class="quarantine-file-path" title="${escapeHtml(item.original_path)}">${escapeHtml(item.original_path)}</div>
-                    </div>
-                    <div class="quarantine-detection">
-                        <div class="detection-label">DETECTION</div>
-                        <div class="detection-name">${escapeHtml(item.detection_name)}</div>
-                    </div>
-                    <div class="quarantine-severity">
-                        <span class="severity-badge">${escapeHtml(String(item.severity).toUpperCase())}</span>
-                    </div>
-                    <div class="quarantine-actions">
-                        <button
-                            type="button"
-                            class="quarantine-action restore-button"
-                            data-quarantine-action="restore"
-                            data-quarantine-id="${escapeHtml(item.id)}">Restore</button>
-                        <button
-                            type="button"
-                            class="quarantine-action delete-button"
-                            data-quarantine-action="delete"
-                            data-quarantine-id="${escapeHtml(item.id)}">Delete</button>
-                    </div>
-                </div>
-            `).join("");
+        const countEl = document.querySelector("#quarantineCount");
+        if (countEl) countEl.textContent = quarantineItems.length;
+
+        setDeleteAllEnabled(quarantineItems.length > 0);
+        renderQuarantineItems();
     } catch (error) {
         console.error("Failed to load quarantine:", error);
+
         container.innerHTML = `
             <div class="result-item error-result">
                 <div class="result-details">
@@ -1356,16 +1616,56 @@ async function loadQuarantine() {
     }
 }
 
+document.querySelector("#quarantineSearch")?.addEventListener(
+    "input",
+    renderQuarantineItems
+);
+
+document.querySelector("#quarantineSeverityFilter")?.addEventListener(
+    "change",
+    renderQuarantineItems
+);
+
+document.querySelector("#quarantineSelectAll")?.addEventListener(
+    "change",
+    event => {
+        const visibleCheckboxes = [
+            ...document.querySelectorAll(".quarantine-select-item")
+        ];
+
+        for (const checkbox of visibleCheckboxes) {
+            if (event.target.checked) {
+                selectedQuarantineIds.add(checkbox.value);
+            } else {
+                selectedQuarantineIds.delete(checkbox.value);
+            }
+        }
+
+        renderQuarantineItems();
+    }
+);
+
+document.querySelector("#quarantineList")?.addEventListener(
+    "change",
+    event => {
+        const checkbox = event.target.closest(".quarantine-select-item");
+        if (!checkbox) return;
+
+        if (checkbox.checked) {
+            selectedQuarantineIds.add(checkbox.value);
+        } else {
+            selectedQuarantineIds.delete(checkbox.value);
+        }
+
+        updateQuarantineSelectionUI();
+    }
+);
+
 document.querySelector("#quarantineList")?.addEventListener(
     "click",
     async event => {
-        const button = event.target.closest(
-            "[data-quarantine-action]"
-        );
-
-        if (!button) {
-            return;
-        }
+        const button = event.target.closest("[data-quarantine-action]");
+        if (!button) return;
 
         const action = button.dataset.quarantineAction;
         const id = button.dataset.quarantineId;
@@ -1374,7 +1674,7 @@ document.querySelector("#quarantineList")?.addEventListener(
 
         const confirmed = await ask(
             action === "delete"
-                ? "Permanently delete this file? This cannot be undone."
+                ? "Permanently delete this quarantined file? This cannot be undone."
                 : "Restore this file to its original location? Only do this if you are sure it is safe.",
             {
                 title: "Sentinel",
@@ -1383,18 +1683,25 @@ document.querySelector("#quarantineList")?.addEventListener(
                 cancelLabel: "Cancel"
             }
         );
-        if (!confirmed) {
-            return;
-        }
+
+        if (!confirmed) return;
 
         button.disabled = true;
 
         try {
-            await invoke(action === "delete" ? "delete_quarantine" : "restore_quarantine", { id });
+            await invoke(
+                action === "delete"
+                    ? "delete_quarantine"
+                    : "restore_quarantine",
+                { id }
+            );
+
+            selectedQuarantineIds.delete(id);
             await loadQuarantine();
         } catch (error) {
             console.error("Quarantine action failed:", error);
             button.disabled = false;
+
             await message(errorText(error, "The quarantine action failed."), {
                 title: "Sentinel",
                 kind: "error"
@@ -1403,24 +1710,93 @@ document.querySelector("#quarantineList")?.addEventListener(
     }
 );
 
+async function handleSelectedQuarantine(action) {
+    const ids = [...selectedQuarantineIds];
+    if (ids.length === 0) return;
+
+    const isDelete = action === "delete";
+
+    const confirmed = await ask(
+        isDelete
+            ? `Permanently delete ${ids.length} selected quarantined file(s)? This cannot be undone.`
+            : `Restore ${ids.length} selected file(s) to their original locations?`,
+        {
+            title: "Sentinel",
+            kind: "warning",
+            okLabel: isDelete ? "Delete selected" : "Restore selected",
+            cancelLabel: "Cancel"
+        }
+    );
+
+    if (!confirmed) return;
+
+    const restoreButton = document.querySelector("#restoreSelectedQuarantine");
+    const deleteButton = document.querySelector("#deleteSelectedQuarantine");
+
+    if (restoreButton) restoreButton.disabled = true;
+    if (deleteButton) deleteButton.disabled = true;
+
+    const failures = [];
+
+    for (const id of ids) {
+        try {
+            await invoke(
+                isDelete ? "delete_quarantine" : "restore_quarantine",
+                { id }
+            );
+
+            selectedQuarantineIds.delete(id);
+        } catch (error) {
+            failures.push(`${id}: ${errorText(error)}`);
+        }
+    }
+
+    await loadQuarantine();
+
+    if (failures.length > 0) {
+        await message(
+            `${ids.length - failures.length} action(s) succeeded.\n\n` +
+            `${failures.length} action(s) failed:\n${failures.join("\n")}`,
+            {
+                title: "Sentinel",
+                kind: "warning"
+            }
+        );
+    }
+}
+
+document.querySelector("#restoreSelectedQuarantine")?.addEventListener(
+    "click",
+    () => handleSelectedQuarantine("restore")
+);
+
+document.querySelector("#deleteSelectedQuarantine")?.addEventListener(
+    "click",
+    () => handleSelectedQuarantine("delete")
+);
+
 document.querySelector("#deleteAllQuarantine")?.addEventListener(
     "click",
     async () => {
-        const confirmed = await ask("Permanently delete all quarantined items?", {
-            title: "Sentinel",
-            kind: "warning",
-            okLabel: "Delete all",
-            cancelLabel: "Cancel"
-        });
-        if (!confirmed) {
-            return;
-        }
+        const confirmed = await ask(
+            "Permanently delete all quarantined items? This cannot be undone.",
+            {
+                title: "Sentinel",
+                kind: "warning",
+                okLabel: "Delete all",
+                cancelLabel: "Cancel"
+            }
+        );
+
+        if (!confirmed) return;
 
         try {
             await invoke("delete_all_quarantine");
+            selectedQuarantineIds.clear();
             await loadQuarantine();
         } catch (error) {
             console.error("Failed to clear quarantine:", error);
+
             await message(errorText(error, "Could not clear quarantine."), {
                 title: "Sentinel",
                 kind: "error"
@@ -1428,6 +1804,7 @@ document.querySelector("#deleteAllQuarantine")?.addEventListener(
         }
     }
 );
+
 
 // ============================================================
 // SCAN HISTORY
@@ -1527,6 +1904,42 @@ clearHistoryButton?.addEventListener("click", async () => {
 
     renderHistory();
 });
+
+const SIDEBAR_BEHAVIOR_KEY = "sentinel.sidebar.dynamic";
+
+// ============================================================
+// SIDEBAR BEHAVIOR
+// ============================================================
+
+function initializeSidebarBehavior() {
+    const toggle = document.querySelector("#sidebarBehaviorToggle");
+    if (!toggle) return;
+
+    const savedPreference = localStorage.getItem(SIDEBAR_BEHAVIOR_KEY);
+
+    // Dynamic sidebar is enabled by default.
+    toggle.checked = savedPreference === null
+        ? true
+        : savedPreference === "true";
+
+    function applySidebarBehavior() {
+        document.body.classList.toggle(
+            "sidebar-static",
+            !toggle.checked
+        );
+
+        localStorage.setItem(
+            SIDEBAR_BEHAVIOR_KEY,
+            String(toggle.checked)
+        );
+    }
+
+    toggle.addEventListener("change", applySidebarBehavior);
+    applySidebarBehavior();
+}
+
+initializeSidebarBehavior();
+
 // ============================================================
 // SETTINGS INITIALIZATION
 // ============================================================
@@ -1653,6 +2066,51 @@ exclusionsList?.addEventListener("click", async event => {
 });
 
 renderExclusions();
+
+//pause helper
+let scanPaused = false;
+let scanCancelling = false;
+
+// Pause / Resume scan
+pauseScanButton?.addEventListener("click", async () => {
+    if (!scanInProgress) return;
+
+    try {
+        if (scanPaused) {
+            await invoke("resume_scan");
+            scanPaused = false;
+
+            pauseScanButton.textContent = "⏸";
+            pauseScanButton.setAttribute("aria-label", "Pause scan");
+            pauseScanButton.title = "Pause scan";
+        } else {
+            await invoke("pause_scan");
+            scanPaused = true;
+
+            pauseScanButton.textContent = "▶";
+            pauseScanButton.setAttribute("aria-label", "Resume scan");
+            pauseScanButton.title = "Resume scan";
+        }
+    } catch (error) {
+        console.error("Pause/resume failed:", error);
+    }
+});
+
+cancelScanButton?.addEventListener("click", async () => {
+    if (!scanInProgress) return;
+
+    cancelScanButton.disabled = true;
+    cancelScanButton.textContent = "CANCELLING...";
+
+    try {
+        await invoke("cancel_scan");
+    } catch (error) {
+        console.error("Cancel failed:", error);
+        cancelScanButton.disabled = false;
+        cancelScanButton.textContent = "CANCEL SCAN";
+    }
+});
+
 
 // ============================================================
 // INITIAL STATE

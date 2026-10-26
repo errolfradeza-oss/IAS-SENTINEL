@@ -52,219 +52,6 @@ body {
 
 
 /* =========================================================
-   SIDEBAR
-   ========================================================= */
-
-.sidebar {
-    width: 72px;
-    flex: 0 0 72px;
-    height: 100vh;
-    padding: 24px 10px;
-
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-
-    position: relative;
-    z-index: 100;
-
-    background: var(--sidebar);
-    border-right: 1px solid var(--border);
-
-    transition:
-        width 0.25s ease,
-        flex-basis 0.25s ease,
-        box-shadow 0.25s ease;
-}
-
-/* Expand on hover */
-.sidebar:hover {
-    width: 230px;
-    flex-basis: 230px;
-    box-shadow: 12px 0 30px rgba(0, 0, 0, 0.22);
-}
-
-/* BRAND */
-
-/*.brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    min-height: 46px;
-    padding: 4px 7px 28px;
-    white-space: nowrap;
-}
-
-.brand-icon {
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
-
-    border-radius: 10px;
-    background: var(--accent);
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 19px;
-    font-weight: 700;
-    color: white;
-}
-
-.brand-name {
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    white-space: nowrap;
-}
-
-.brand-subtitle {
-    margin-top: 2px;
-    font-size: 16px;
-    color: var(--muted);
-    white-space: nowrap;
-}
-
-/* NAVIGATION */
-
-.navigation {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.nav-item {
-    width: 100%;
-    min-height: 42px;
-    flex-shrink: 0;
-
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--muted);
-
-    padding: 11px 12px;
-
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    text-align: left;
-    font-family: inherit;
-    font-size: 20px;
-    font-weight: 500;
-    white-space: nowrap;
-
-    cursor: pointer;
-
-    transition:
-        background 0.15s ease,
-        color 0.15s ease;
-}
-
-.nav-item span {
-    width: 18px;
-    min-width: 18px;
-    flex: 0 0 18px;
-
-    text-align: center;
-    font-size: px;
-}
-
-.nav-item:hover {
-    background: var(--surface);
-    color: var(--text);
-}
-
-.nav-item.active {
-    background: rgba(59, 130, 246, 0.12);
-    color: #60a5fa;
-}
-
-/* FOOTER */
-
-.sidebar-footer {
-    margin-top: auto;
-    padding: 12px 7px;
-
-    color: #647181;
-    font-size: 13px;
-    white-space: nowrap;
-
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-
-    transition: opacity 0.15s ease;
-}
-
-.sidebar-footer span {
-    color: #4b5563;
-}
-
-/* COLLAPSED STATE */
-
-.brand > div:last-child {
-    white-space: nowrap;
-    transition: opacity 0.15s ease;
-}
-
-.sidebar:not(:hover) .brand > div:last-child,
-.sidebar:not(:hover) .sidebar-footer {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.sidebar:not(:hover) .nav-item {
-    justify-content: center;
-    gap: 0;
-    padding-left: 0;
-    padding-right: 0;
-    font-size: 0;
-}
-
-/* Keep navigation icons visible when collapsed */
-.sidebar:not(:hover) .nav-item span {
-    font-size: 18px;
-}
-
-/* LIGHT THEME */
-
-html[data-theme="light"] .sidebar:hover,
-html[data-theme="light"] .sidebar:focus-within {
-    box-shadow: 12px 0 30px rgba(15, 23, 42, 0.12);
-}
-
-/* RESPONSIVE */
-
-@media (max-width: 800px) {
-    .sidebar {
-        width: 64px;
-        flex-basis: 64px;
-        flex-shrink: 0;
-    }
-
-    .sidebar:hover,
-    .sidebar:focus-within {
-        width: 210px;
-        flex-basis: 210px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .sidebar,
-    .sidebar > *,
-    .nav-item {
-        transition: none;
-    }
-}
-
-
-
-
-/* =========================================================
    COLLAPSIBLE HOVER SIDEBAR
    ========================================================= */
 
@@ -352,12 +139,17 @@ html[data-theme="light"] .sidebar:focus-within {
     pointer-events: none;
 }
 
+/* Collapsed sidebar: hide labels, preserve symbol size */
 .sidebar:not(:hover) .nav-item {
     justify-content: center;
     gap: 0;
     padding-left: 0;
     padding-right: 0;
-    font-size: 0;
+    font-size: 16px;
+}
+
+.sidebar:not(:hover) .nav-label {
+    display: none;
 }
 
 /* NAVIGATION */
@@ -422,10 +214,7 @@ html[data-theme="light"] .sidebar:focus-within {
 
 /* LIGHT THEME */
 
-html[data-theme="light"] .sidebar:hover,
-html[data-theme="light"] .sidebar:focus-within {
-    box-shadow: 12px 0 30px rgba(15, 23, 42, 0.12);
-}
+
 
 /* Keep sidebar usable on narrow screens */
 
@@ -543,14 +332,9 @@ html[data-theme="light"] .sidebar:focus-within {
     white-space: nowrap;
 }
 
-html[data-theme="light"] .dashboard-last-scan {
-    border-color: #e2e8f0;
-    background: #fff;
-}
 
-html[data-theme="light"] .dashboard-last-scan strong {
-    color: #172033;
-}
+
+
 
 .scan-header-stats {
     display: grid;
@@ -596,14 +380,9 @@ html[data-theme="light"] .dashboard-last-scan strong {
     color: var(--danger);
 }
 
-html[data-theme="light"] .scan-header-stat {
-    border-color: #e2e8f0;
-    background: #fff;
-}
 
-html[data-theme="light"] .scan-header-stat strong {
-    color: #172033;
-}
+
+
 
 @media (max-width: 680px) {
     .topbar {
@@ -1484,7 +1263,7 @@ html[data-theme="light"] .scan-header-stat strong {
 }
 
 .quarantine-file-name {
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 600;
 
     white-space: nowrap;
@@ -1497,7 +1276,7 @@ html[data-theme="light"] .scan-header-stat strong {
 
     color: var(--muted);
 
-    font-size: 10px;
+    font-size: 15px;
 
     white-space: nowrap;
     overflow: hidden;
@@ -1564,7 +1343,7 @@ html[data-theme="light"] .scan-header-stat strong {
 
 .quarantine-actions {
     display: flex;
-
+    
     gap: 7px;
 }
 
@@ -1666,80 +1445,27 @@ html[data-theme="light"] .scan-header-stat strong {
 /* light mode/dark mode */
 
 /* LIGHT THEME */
-html[data-theme="light"] body {
-    background: #f3f6fb;
-    color: #172033;
-}
 
-html[data-theme="light"] .app,
-html[data-theme="light"] .main,
-html[data-theme="light"] .page {
-    background: #f3f6fb;
-    color: #172033;
-}
 
-html[data-theme="light"] .sidebar {
-    background: #ffffff;
-    color: #172033;
-    border-right: 1px solid #e2e8f0;
-}
 
-html[data-theme="light"] .brand-name,
-html[data-theme="light"] .navigation,
-html[data-theme="light"] .nav-item,
-html[data-theme="light"] .topbar h1,
-html[data-theme="light"] .security-info h2,
-html[data-theme="light"] .panel h3,
-html[data-theme="light"] .quarantine-header h1,
-html[data-theme="light"] .quarantine-panel h2,
-html[data-theme="light"] .settings-header h1,
-html[data-theme="light"] .setting-copy h3 {
-    color: #172033;
-}
 
-html[data-theme="light"] .nav-item {
-    background: transparent;
-}
 
-html[data-theme="light"] .nav-item.active {
-    background: #e8efff;
-    color: #2457c5;
-}
 
-html[data-theme="light"] .security-card,
-html[data-theme="light"] .panel,
-html[data-theme="light"] .stat-card,
-html[data-theme="light"] .quarantine-panel,
-html[data-theme="light"] .settings-panel {
-    background: #ffffff;
-    color: #172033;
-    border-color: #e2e8f0;
-}
 
-html[data-theme="light"] p,
-html[data-theme="light"] .stat-title,
-html[data-theme="light"] .setting-copy p,
-html[data-theme="light"] .sidebar-footer {
-    color: #64748b;
-}
 
-html[data-theme="light"] .quarantine-warning {
-    background: #fff7ed;
-    color: #9a3412;
-    border-color: #fed7aa;
-}
 
-html[data-theme="light"] input,
-html[data-theme="light"] select,
-html[data-theme="light"] textarea {
-    background: #ffffff;
-    color: #172033;
-    border-color: #cbd5e1;
-}
 
-html[data-theme="light"] .setting-row {
-    border-color: #e2e8f0;
-}
+
+
+
+
+
+
+
+
+
+
+
 
 /*transition ng theme change*/
 
@@ -2049,15 +1775,9 @@ html[data-theme="light"] .setting-row {
     border-color: rgba(16, 185, 129, 0.28);
 }
 
-html[data-theme="light"] .detected-threat {
-    border-color: #d5deea;
-    background: #f8fafc;
-}
 
-html[data-theme="light"] .threats-overview-copy h4,
-html[data-theme="light"] .detected-threat-copy h5 {
-    color: #172033;
-}
+
+
 
 @media (max-width: 620px) {
     #results.threat-results {
@@ -2110,10 +1830,7 @@ html[data-theme="light"] .detected-threat-copy h5 {
 }
 
 /* Light theme */
-html[data-theme="light"] {
-    --scan-text-color: #172033;
-    --scan-percent-color: #2563eb;
-}
+
 
 /* Scan progress labels */
 .scan-progress-header,
@@ -2296,22 +2013,13 @@ html[data-theme="light"] {
     transform: none;
 }
 
-html[data-theme="light"] .live-security-card {
-    background: linear-gradient(115deg, #ffffff, #f6f9ff 75%);
-    border-color: #dbe5f1;
-}
 
-html[data-theme="light"] .stat-card {
-    background: linear-gradient(145deg, #ffffff, #f8faff);
-}
 
-html[data-theme="light"] .stat-card:hover {
-    border-color: #b8c9df;
-}
 
-html[data-theme="light"] .protection-status[data-status="unknown"] {
-    color: #64748b;
-}
+
+
+
+
 
 @keyframes sentinel-pulse {
     0%, 100% { opacity: 1; }
@@ -2538,15 +2246,9 @@ html[data-theme="light"] .protection-status[data-status="unknown"] {
    LIGHT THEME
    ============================================================ */
 
-html[data-theme="light"] .scan-ring::before {
-    background: var(--card-bg, #ffffff);
-    border-color: rgba(100, 116, 139, 0.2);
-}
 
-html[data-theme="light"] {
-    --scan-text-color: #172033;
-    --scan-percent-color: #2563eb;
-}
+
+
 
 /* ============================================================
    RESPONSIVE
@@ -3168,46 +2870,23 @@ html[data-theme="light"] {
 }
 
 /* Light theme */
-html[data-theme="light"] .theme-preview {
-    background: #ffffff;
-    color: #172033;
-    border-color: #e2e8f0;
-}
 
-html[data-theme="light"] .theme-preview-content h3 {
-    color: #172033;
-}
 
-html[data-theme="light"] .theme-preview-content > span {
-    color: #64748b;
-}
+
+
+
 
 /* Theme selection buttons */
-html[data-theme="light"] .theme-option {
-    background: #ffffff;
-    color: #172033;
-    border-color: #e2e8f0;
-}
 
-html[data-theme="light"] .theme-option:hover {
-    border-color: #60a5fa;
-    background: #f8fafc;
-}
 
-html[data-theme="light"] .theme-option.active {
-    background: #e8efff;
-    border-color: #3b82f6;
-    color: #2457c5;
-}
+
+
+
 
 /* Keep the Appearance heading and description readable */
-html[data-theme="light"] .theme-setting-row .setting-copy h3 {
-    color: #172033;
-}
 
-html[data-theme="light"] .theme-setting-row .setting-copy p {
-    color: #64748b;
-}
+
+
 
 /* Smooth color changes */
 .theme-preview-content h3,
@@ -3224,69 +2903,38 @@ html[data-theme="light"] .theme-setting-row .setting-copy p {
    ============================================================ */
 
 /* Scan section container */
-html[data-theme="light"] .scan-options {
-    color: #172033;
-}
+
+
+
 
 /* Quick Scan, Full Scan, and Custom Scan cards */
-html[data-theme="light"] .scan-option-card {
-    background: #ffffff;
-    border-color: #e2e8f0;
-    color: #172033;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-}
+
 
 /* Card headings and divider */
-html[data-theme="light"] .scan-option-heading {
-    border-bottom-color: #e2e8f0;
-}
 
-html[data-theme="light"] .scan-option-heading h2 {
-    color: #172033;
-}
+
+
 
 /* Card descriptions */
-html[data-theme="light"] .scan-option-card > p {
-    color: #64748b;
-}
+
 
 /* Scan icons */
-html[data-theme="light"] .scan-option-icon {
-    background: #eff6ff;
-    color: #2563eb;
-}
 
-html[data-theme="light"] .quick-scan-icon,
-html[data-theme="light"] .system-scan-icon,
-html[data-theme="light"] .custom-scan-icon {
-    color: #2563eb;
-}
+
+
 
 /* Custom scan selected path */
-html[data-theme="light"] .selected-path {
-    color: #64748b;
-}
+
 
 /* Custom scan controls */
-html[data-theme="light"] .custom-scan-controls .secondary-button {
-    color: #334155;
-    border-color: #cbd5e1;
-}
 
-html[data-theme="light"] .custom-scan-controls .secondary-button:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-}
+
+
 
 /* Scan buttons */
-html[data-theme="light"] .scan-option-button {
-    background: #2563eb;
-    color: #ffffff;
-}
 
-html[data-theme="light"] .scan-option-button:not(:disabled):hover {
-    background: #1d4ed8;
-}
+
+
 
 /* Smooth theme transitions */
 .scan-option-card,
@@ -3377,4 +3025,829 @@ html[data-theme="light"] .scan-option-button:not(:disabled):hover {
     .exclusions-controls button {
         flex: 1;
     }
+}
+
+/* ============================================================
+   EXCLUSION LIST - LIGHT THEME
+   ============================================================ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ============================================================
+   SIDEBAR BEHAVIOR SETTING
+   ============================================================ */
+
+/* Static mode: keep the sidebar fully expanded */
+body.sidebar-static .sidebar {
+    width: 230px;
+    flex-basis: 230px;
+}
+
+/* Keep branding and footer visible */
+body.sidebar-static .sidebar:not(:hover) .brand > div:last-child,
+body.sidebar-static .sidebar:not(:hover) .sidebar-footer {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Static mode: remain expanded with consistent typography */
+body.sidebar-static .sidebar:not(:hover) .nav-item {
+    justify-content: flex-start;
+    gap: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 16px;
+}
+
+body.sidebar-static .sidebar:not(:hover) .nav-label {
+    display: inline;
+}
+
+body.sidebar-static .sidebar:not(:hover) .nav-item span {
+    font-size: 15px;
+}
+
+/* Prevent hover from changing the sidebar width in static mode */
+body.sidebar-static .sidebar:hover {
+    width: 230px;
+    flex-basis: 230px;
+}
+
+/* Preserve the expanded layout on narrower windows */
+@media (max-width: 800px) {
+    body.sidebar-static .sidebar {
+        width: 210px;
+        flex-basis: 210px;
+    }
+
+    body.sidebar-static .sidebar:hover {
+        width: 210px;
+        flex-basis: 210px;
+    }
+}
+
+/* ============================================================
+   THEME OVERRIDES
+   Theme-specific rules grouped here. Responsive theme rules remain
+   inside their original media queries.
+   ============================================================ */
+
+html[data-theme="light"] .sidebar:hover,
+html[data-theme="light"] .sidebar:focus-within {
+    box-shadow: 12px 0 30px rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme="light"] .dashboard-last-scan {
+    border-color: #e2e8f0;
+    background: #fff;
+}
+
+html[data-theme="light"] .dashboard-last-scan strong {
+    color: #172033;
+}
+
+html[data-theme="light"] .scan-header-stat {
+    border-color: #e2e8f0;
+    background: #fff;
+}
+
+html[data-theme="light"] .scan-header-stat strong {
+    color: #172033;
+}
+
+html[data-theme="light"] body {
+    background: #f3f6fb;
+    color: #172033;
+}
+
+html[data-theme="light"] .app,
+html[data-theme="light"] .main,
+html[data-theme="light"] .page {
+    background: #f3f6fb;
+    color: #172033;
+}
+
+html[data-theme="light"] .sidebar {
+    background: #ffffff;
+    color: #172033;
+    border-right: 1px solid #e2e8f0;
+}
+
+html[data-theme="light"] .brand-name,
+html[data-theme="light"] .navigation,
+html[data-theme="light"] .nav-item,
+html[data-theme="light"] .topbar h1,
+html[data-theme="light"] .security-info h2,
+html[data-theme="light"] .panel h3,
+html[data-theme="light"] .quarantine-header h1,
+html[data-theme="light"] .quarantine-panel h2,
+html[data-theme="light"] .settings-header h1,
+html[data-theme="light"] .setting-copy h3 {
+    color: #172033;
+}
+
+html[data-theme="light"] .nav-item {
+    background: transparent;
+}
+
+html[data-theme="light"] .nav-item.active {
+    background: #e8efff;
+    color: #2457c5;
+}
+
+html[data-theme="light"] .security-card,
+html[data-theme="light"] .panel,
+html[data-theme="light"] .stat-card,
+html[data-theme="light"] .quarantine-panel,
+html[data-theme="light"] .settings-panel {
+    background: #ffffff;
+    color: #172033;
+    border-color: #e2e8f0;
+}
+
+html[data-theme="light"] p,
+html[data-theme="light"] .stat-title,
+html[data-theme="light"] .setting-copy p,
+html[data-theme="light"] .sidebar-footer {
+    color: #64748b;
+}
+
+html[data-theme="light"] .quarantine-warning {
+    background: #fff7ed;
+    color: #9a3412;
+    border-color: #fed7aa;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+    background: #ffffff;
+    color: #172033;
+    border-color: #cbd5e1;
+}
+
+html[data-theme="light"] .setting-row {
+    border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .detected-threat {
+    border-color: #d5deea;
+    background: #f8fafc;
+}
+
+html[data-theme="light"] .threats-overview-copy h4,
+html[data-theme="light"] .detected-threat-copy h5 {
+    color: #172033;
+}
+
+html[data-theme="light"] {
+    --scan-text-color: #172033;
+    --scan-percent-color: #2563eb;
+}
+
+html[data-theme="light"] .live-security-card {
+    background: linear-gradient(115deg, #ffffff, #f6f9ff 75%);
+    border-color: #dbe5f1;
+}
+
+html[data-theme="light"] .stat-card {
+    background: linear-gradient(145deg, #ffffff, #f8faff);
+}
+
+html[data-theme="light"] .stat-card:hover {
+    border-color: #b8c9df;
+}
+
+html[data-theme="light"] .protection-status[data-status="unknown"] {
+    color: #64748b;
+}
+
+html[data-theme="light"] .scan-ring::before {
+    background: var(--card-bg, #ffffff);
+    border-color: rgba(100, 116, 139, 0.2);
+}
+
+html[data-theme="light"] {
+    --scan-text-color: #172033;
+    --scan-percent-color: #2563eb;
+}
+
+html[data-theme="light"] .theme-preview {
+    background: #ffffff;
+    color: #172033;
+    border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .theme-preview-content h3 {
+    color: #172033;
+}
+
+html[data-theme="light"] .theme-preview-content > span {
+    color: #64748b;
+}
+
+html[data-theme="light"] .theme-option {
+    background: #ffffff;
+    color: #172033;
+    border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .theme-option:hover {
+    border-color: #60a5fa;
+    background: #f8fafc;
+}
+
+html[data-theme="light"] .theme-option.active {
+    background: #e8efff;
+    border-color: #3b82f6;
+    color: #2457c5;
+}
+
+html[data-theme="light"] .theme-setting-row .setting-copy h3 {
+    color: #172033;
+}
+
+html[data-theme="light"] .theme-setting-row .setting-copy p {
+    color: #64748b;
+}
+
+html[data-theme="light"] .scan-options {
+    color: #172033;
+}
+
+html[data-theme="light"] .exclusions-list {
+    color: #172033;
+}
+
+html[data-theme="light"] .scan-option-card {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    color: #172033;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+html[data-theme="light"] .scan-option-heading {
+    border-bottom-color: #e2e8f0;
+}
+
+html[data-theme="light"] .scan-option-heading h2 {
+    color: #172033;
+}
+
+html[data-theme="light"] .scan-option-card > p {
+    color: #64748b;
+}
+
+html[data-theme="light"] .scan-option-icon {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+html[data-theme="light"] .quick-scan-icon,
+html[data-theme="light"] .system-scan-icon,
+html[data-theme="light"] .custom-scan-icon {
+    color: #2563eb;
+}
+
+html[data-theme="light"] .selected-path {
+    color: #64748b;
+}
+
+html[data-theme="light"] .custom-scan-controls .secondary-button {
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+html[data-theme="light"] .custom-scan-controls .secondary-button:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+html[data-theme="light"] .scan-option-button {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+html[data-theme="light"] .scan-option-button:not(:disabled):hover {
+    background: #1d4ed8;
+}
+
+html[data-theme="light"] .exclusion-item {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #172033;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+html[data-theme="light"] .exclusion-path {
+    color: #334155;
+}
+
+html[data-theme="light"] .file-icon {
+    color: #2563eb;
+}
+
+html[data-theme="light"] .exclusion-remove {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+html[data-theme="light"] .exclusion-remove:hover {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+html[data-theme="light"] #exclusionList .empty-state {
+    background: #f8fafc;
+    color: #64748b;
+    border-color: #e2e8f0;
+}
+
+
+/* ============================================================
+   TYPOGRAPHY ADJUSTMENTS
+   Larger titles, sidebar text, and button labels only.
+   Supporting/body text sizes remain unchanged.
+   ============================================================ */
+
+/* Main page and section titles */
+.topbar h1,
+.settings-header h1,
+.quarantine-header h1 {
+    font-size: 28px;
+}
+
+.security-info h2 {
+    font-size: 23px;
+}
+
+.panel-header h3,
+.quarantine-panel-header h2 {
+    font-size: 21px;
+}
+
+.setting-copy h3,
+.quarantine-empty h3,
+.detected-threat-copy h5 {
+    font-size: 18px;
+}
+
+.threats-overview-copy h4 {
+    font-size: 21px;
+}
+
+.scan-option-heading h2 {
+    font-size: 25px;
+}
+
+/* Sidebar branding and navigation */
+.brand-name {
+    font-size: 22px;
+}
+
+.brand-subtitle {
+    font-size: 17px;
+}
+
+.nav-item {
+    font-size: 16px;
+}
+
+.nav-item span {
+    font-size: 16px;
+}
+
+.sidebar-footer {
+    font-size: 12px;
+}
+
+/* Button labels */
+.scan-button {
+    font-size: 15px;
+}
+
+.secondary-button,
+.clear-history-button,
+.delete-all-button,
+.restore-button,
+.delete-button,
+.threat-action-button,
+.scan-option-button,
+.scan-back-button,
+.scan-again-button,
+.exclusions-controls button,
+.custom-scan-controls .secondary-button {
+    font-size: 18px;
+}
+
+
+/* ============================================================
+   SIDEBAR TYPOGRAPHY AND COLLAPSE
+   ============================================================ */
+
+/* Consistent symbol and label font sizes */
+.sidebar .nav-icon {
+    width: 18px;
+    min-width: 18px;
+    flex: 0 0 18px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.sidebar .nav-label {
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+/* Keep the brand font sizes consistent */
+.sidebar .brand-name {
+    font-size: 22px;
+}
+
+.sidebar .brand-subtitle {
+    font-size: 17px;
+}
+
+.sidebar .sidebar-footer {
+    font-size: 12px;
+}
+
+/* Dynamic mode: collapsed sidebar shows symbols only */
+body:not(.sidebar-static) .sidebar:not(:hover) .nav-item {
+    justify-content: center;
+    gap: 0;
+}
+
+body:not(.sidebar-static) .sidebar:not(:hover) .nav-label {
+    display: none;
+}
+
+/* Dynamic mode: expanded sidebar shows symbols and labels */
+body:not(.sidebar-static) .sidebar:hover .nav-label {
+    display: inline;
+}
+
+/* Static mode: always show navigation labels */
+body.sidebar-static .sidebar .nav-label {
+    display: inline;
+}
+
+/* quarantine
+
+/* ============================================================
+   QUARANTINE SEARCH, FILTERS, AND BULK ACTIONS
+   ============================================================ */
+
+.quarantine-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px;
+    gap: 12px;
+    margin: 18px 0 12px;
+}
+
+.quarantine-toolbar input,
+.quarantine-toolbar select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 13px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+}
+
+.quarantine-toolbar input::placeholder {
+    color: var(--muted);
+}
+
+.quarantine-toolbar input:focus,
+.quarantine-toolbar select:focus {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+}
+
+.quarantine-bulk-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-light);
+    color: var(--text);
+    font-size: 14px;
+}
+
+.quarantine-select-all,
+.quarantine-item-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.quarantine-select-all input,
+.quarantine-item-select input {
+    width: 17px;
+    height: 17px;
+    accent-color: #38bdf8;
+    cursor: pointer;
+}
+
+#quarantineSelectedCount {
+    color: var(--muted);
+    margin-right: auto;
+}
+
+.quarantine-bulk-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.quarantine-bulk-buttons button {
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#restoreSelectedQuarantine:not(:disabled) {
+    border-color: rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+}
+
+#deleteSelectedQuarantine:not(:disabled) {
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+}
+
+.quarantine-bulk-buttons button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.quarantine-item-select {
+    flex-shrink: 0;
+}
+
+.quarantine-item .severity-badge {
+    white-space: nowrap;
+}
+
+.severity-severe {
+    color: #ef4444;
+}
+
+.severity-suspicious {
+    color: #f59e0b;
+}
+
+.severity-minor {
+    color: #38bdf8;
+}
+
+.severity-unknown {
+    color: var(--muted);
+}
+
+.detected-threat .threat-card-actions[hidden] {
+    display: none;
+}
+
+@media (max-width: 700px) {
+    .quarantine-toolbar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .quarantine-bulk-toolbar {
+        align-items: flex-start;
+    }
+
+    .quarantine-bulk-buttons {
+        width: 100%;
+    }
+
+    .quarantine-bulk-buttons button {
+        flex: 1;
+    }
+}
+
+/* Keep the added controls readable in light theme. */
+html[data-theme="light"] .quarantine-toolbar input,
+html[data-theme="light"] .quarantine-toolbar select {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #172033;
+}
+
+html[data-theme="light"] .quarantine-bulk-toolbar {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #172033;
+}
+
+html[data-theme="light"] .quarantine-bulk-buttons button {
+    color: #172033;
+    border-color: #cbd5e1;
+}
+
+/* Light theme: scan session controls */
+html[data-theme="light"] .scan-control-buttons .secondary-button,
+html[data-theme="light"] .scan-session-actions .scan-back-button {
+    background: #ffffff;
+    color: #334155;
+    border-color: #cbd5e1;
+    transition:
+        background 250ms ease,
+        color 250ms ease,
+        border-color 250ms ease;
+}
+
+/* Hover states */
+html[data-theme="light"] .scan-control-buttons .secondary-button:hover:not(:disabled),
+html[data-theme="light"] .scan-session-actions .scan-back-button:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #172033;
+    border-color: #94a3b8;
+}
+
+/* Disabled states */
+html[data-theme="light"] .scan-control-buttons .secondary-button:disabled,
+html[data-theme="light"] .scan-session-actions .scan-back-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* THREAT SEVERITY VISIBILITY */
+.detected-threat-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.detected-threat-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.severity-pill {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.severity-severe {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.severity-suspicious {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.severity-minor {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+}
+
+.severity-unknown {
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.12);
+}
+
+/* =========================
+   SCAN CONTROL BUTTONS
+   ========================= */
+
+.scan-control-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.scan-control-buttons .scan-button,
+.scan-control-buttons .secondary-button {
+    min-height: 42px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+/* Pause / Resume / Cancel buttons */
+.scan-control-buttons .secondary-button {
+    padding: 12px 20px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+}
+
+.scan-control-buttons .secondary-button:hover:not(:disabled) {
+    background: var(--surface-light);
+    border-color: #475569;
+    transform: translateY(-1px);
+}
+
+/* Disabled controls */
+.scan-control-buttons button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Respect the existing hidden attribute */
+.scan-control-buttons button[hidden] {
+    display: none !important;
+}
+
+/* =========================
+   SCAN CONTROL BUTTONS
+   ========================= */
+
+.scan-control-buttons {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.scan-control-buttons .scan-button {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    transform: none;
+}
+
+.scan-control-buttons .scan-button:hover {
+    transform: none;
+}
+
+.scan-control-buttons .pause-icon-button {
+    position: absolute;
+    right: -50px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    min-width: 44px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+}
+
+.scan-control-buttons .pause-icon-button:hover:not(:disabled) {
+    transform: translateY(-50%);
+}
+
+.scan-control-buttons .pause-icon-button[hidden] {
+    display: none !important;
 }

@@ -22,23 +22,23 @@
 
             <nav class="navigation">
                 <button class="nav-item active" data-page="dashboard">
-                    <span>▣</span>
-                    Dashboard
+                    <span class="nav-icon">▣</span>
+                    <span class="nav-label">Dashboard</span>
                 </button>
 
                 <button class="nav-item" data-page="quarantine">
-                    <span>▤</span>
-                    Quarantine
+                    <span class="nav-icon">▤</span>
+                    <span class="nav-label">Quarantine</span>
                 </button>
 
                 <button class="nav-item" data-page="history">
-                    <span>◷</span>
-                    History
+                    <span class="nav-icon">◷</span>
+                    <span class="nav-label">History</span>
                 </button>
 
                 <button class="nav-item" data-page="settings">
-                    <span>⚙</span>
-                    Settings
+                    <span class="nav-icon">⚙</span>
+                    <span class="nav-label">Settings</span>
                 </button>
             </nav>
 
@@ -90,7 +90,7 @@
                                     <span class="scan-option-icon quick-scan-icon" aria-hidden="true">◉</span>
                                     <h2>Quick Scan</h2>
                                 </div>
-                                <p>Scans critical areas where malware usually resides.</p>
+                                <p>Scans common malware locations, including Downloads, temporary files, startup folders, and system directories.</p>
                                 <button class="scan-option-button" type="button" data-scan-mode="quick">
                                     Quick Scan
                                 </button>
@@ -149,9 +149,20 @@
                                     <h2 id="scanHeading">Quick Scan</h2>
                                     <p id="scanSubtext">Quick Scan is not available yet.</p>
                                 </div>
-                                <button class="scan-button" id="modeScanButton" type="button" disabled>
-                                    START SCAN
-                                </button>
+                                <div class="scan-control-buttons">
+                                    <button class="scan-button" id="modeScanButton" type="button">
+                                        START SCAN
+                                    </button>
+
+                                    <button
+                                        class="secondary-button pause-icon-button"
+                                        id="pauseScanButton"
+                                        type="button"
+                                        hidden
+                                        aria-label="Pause scan"
+                                        title="Pause scan"
+                                    >⏸</button>
+                                </div>
                                 <div class="scan-result-content results-empty" id="results" hidden>
                                     <div class="empty-icon">✓</div>
                                     <span>No threats detected yet.</span>
@@ -199,6 +210,41 @@
                                 <button class="delete-all-button" id="deleteAllQuarantine">
                                     DELETE ALL
                                 </button>
+                            </div>
+
+                            <div class="quarantine-toolbar">
+                                <input
+                                    type="search"
+                                    id="quarantineSearch"
+                                    placeholder="Search filename, path, or detection..."
+                                    aria-label="Search quarantined files"
+                                >
+
+                                <select id="quarantineSeverityFilter" aria-label="Filter by severity">
+                                    <option value="all">All severities</option>
+                                    <option value="Severe">Severe</option>
+                                    <option value="Suspicious">Suspicious</option>
+                                    <option value="Minor">Minor</option>
+                                    <option value="Unknown">Unknown</option>
+                                </select>
+                            </div>
+
+                            <div class="quarantine-bulk-toolbar">
+                                <label class="quarantine-select-all">
+                                    <input type="checkbox" id="quarantineSelectAll">
+                                    Select all visible
+                                </label>
+
+                                <span id="quarantineSelectedCount">0 selected</span>
+
+                                <div class="quarantine-bulk-buttons">
+                                    <button type="button" id="restoreSelectedQuarantine" disabled>
+                                        Restore selected
+                                    </button>
+                                    <button type="button" id="deleteSelectedQuarantine" disabled>
+                                        Delete selected
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="quarantine-list" id="quarantineList">
@@ -270,7 +316,18 @@
                                     <span class="slider"></span>
                                 </label>
                             </div>
+                            
+                            <div class="setting-row">
+                                <div class="setting-copy">
+                                    <h3>Dynamic Sidebar</h3>
+                                    <p>Expand the sidebar when hovering over it. Turn off to keep it fully expanded.</p>
+                                </div>
 
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="sidebarBehaviorToggle">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
                             <!--div class="setting-row">
                                 <div class="setting-copy">
                                     <h3>Scan Configuration</h3>
@@ -384,6 +441,8 @@
                 </section>
                 </div>
             </div>
+
+
         </main>
     </div>
 

@@ -41,7 +41,7 @@ def scan_file(rules, item):
             {
                 "path": str(path),
                 "name": match.rule,
-                "severity": str(match.meta.get("severity", "Medium")),
+                "severity": str(match.meta.get("severity", "Unknown")).strip(),
                 "engine": "YARA",
             }
             for match in matches

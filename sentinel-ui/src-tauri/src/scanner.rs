@@ -37,6 +37,7 @@ const RISKY_EXT: &[&str] = &[
 #[derive(Default)]
 pub struct ScanState {
     cancel: Arc<AtomicBool>,
+    paused: Arc<AtomicBool>,
     running: AtomicBool,
 }
 
@@ -46,6 +47,7 @@ pub struct Threat {
     pub name: String,
     pub severity: String,
     pub sha256: String,
+    pub detection_source: String,
 }
 
 #[derive(Serialize)]
@@ -197,12 +199,14 @@ pub async fn start_scan(
     }
 
     state.cancel.store(false, Ordering::SeqCst);
+    state.paused.store(false, Ordering::SeqCst);
 
     let cancel = state.cancel.clone();
+    let paused = state.paused.clone();
     let handle = app.clone();
 
     let outcome = tauri::async_runtime::spawn_blocking(move || {
-        run_scan(handle, mode, path, cancel)
+        run_scan(handle, mode, path, cancel, paused)
     })
     .await
     .map_err(|error| format!("Scan thread failed: {error}"))
@@ -218,11 +222,40 @@ pub fn cancel_scan(state: State<'_, ScanState>) {
     state.cancel.store(true, Ordering::SeqCst);
 }
 
+#[tauri::command]
+pub fn pause_scan(state: State<'_, ScanState>) {
+    if state.running.load(Ordering::SeqCst) {
+        state.paused.store(true, Ordering::SeqCst);
+    }
+}
+
+#[tauri::command]
+pub fn resume_scan(state: State<'_, ScanState>) {
+    state.paused.store(false, Ordering::SeqCst);
+}
+
+//helper for pause
+fn wait_if_paused(
+    cancel: &AtomicBool,
+    paused: &AtomicBool,
+) -> bool {
+    while paused.load(Ordering::SeqCst) {
+        if cancel.load(Ordering::SeqCst) {
+            return false;
+        }
+
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    !cancel.load(Ordering::SeqCst)
+}
+
 fn run_scan(
     app: AppHandle,
     mode: String,
     path: Option<String>,
     cancel: Arc<AtomicBool>,
+    paused: Arc<AtomicBool>,
 ) -> Result<ScanResult, String> {
     let started = Instant::now();
     let progress_percent = Arc::new(Mutex::new(0.0_f64));
@@ -325,11 +358,11 @@ fn run_scan(
 
     pool.install(|| {
         files.par_iter().for_each(|file| {
-            if cancel.load(Ordering::Relaxed) {
-                return;
-            }
+            if !wait_if_paused(&cancel, &paused) {
+            return;
+        }
 
-            match hash_file(file, &cancel) {
+        match hash_file(file, &cancel, &paused) {
                 Ok(Some(hash)) => {
                     //sha 256 cache
                     if let Ok(mut hashes) = file_hashes.lock() {
@@ -344,6 +377,7 @@ fn run_scan(
                                 name: signature.name.clone(),
                                 severity: signature.severity.clone(),
                                 sha256: hash,
+                                detection_source: "sha256-signature".into(),
                             });
                         }
                     }
@@ -390,12 +424,14 @@ fn run_scan(
     //sha 256 cache
     let clamav_hashes = file_hashes;
     let clamav_cancel = cancel.clone();
+    let clamav_paused = paused.clone();
     let clamav_progress = progress_percent.clone();
     let clamav_base_threats = threats.len();
 
     let yara_app = app.clone();
     let yara_files = files.clone();
     let yara_cancel = cancel.clone();
+    let yara_paused = paused.clone();
     let yara_progress = progress_percent.clone();
     let yara_base_threats = threats.len();
 
@@ -411,6 +447,7 @@ fn run_scan(
             &clamav_cancel,
             clamav_base_threats,
             &clamav_progress,
+            &clamav_paused,
         )
     });
 
@@ -425,6 +462,7 @@ fn run_scan(
             &yara_cancel,
             yara_base_threats,
             &yara_progress,
+            &yara_paused,
         )
     });
 
@@ -466,7 +504,11 @@ fn run_scan(
     })
 }
 
-fn hash_file(path: &Path, cancel: &AtomicBool) -> std::io::Result<Option<String>> {
+fn hash_file(
+    path: &Path,
+    cancel: &AtomicBool,
+    paused: &AtomicBool,
+) -> std::io::Result<Option<String>> {
     let mut file = File::open(path)?;
     let len = file.metadata()?.len();
     if len > MAX_FILE_SIZE {
@@ -477,7 +519,7 @@ fn hash_file(path: &Path, cancel: &AtomicBool) -> std::io::Result<Option<String>
     let mut hasher = Sha256::new();
 
     loop {
-        if cancel.load(Ordering::Relaxed) {
+        if !wait_if_paused(cancel, paused) {
             return Ok(None);
         }
         let count = file.read(&mut buffer)?;
@@ -601,7 +643,7 @@ struct Sig {
 fn default_sig() -> Sig {
     Sig {
         name: "Known malware".into(),
-        severity: "High".into(),
+        severity: "low".into(),
     }
 }
 
@@ -615,21 +657,22 @@ fn text_field(map: &Map<String, Value>, keys: &[&str]) -> Option<String> {
         .map(str::to_string)
 }
 
+
 fn sig_from_value(value: &Value) -> Sig {
     match value {
         Value::String(name) => Sig {
             name: name.clone(),
-            severity: "High".into(),
+            severity: "Low".into(),
         },
         Value::Object(map) => Sig {
             name: text_field(map, &["name", "threat", "detection", "malware", "family"])
                 .unwrap_or_else(|| "Known malware".into()),
-            severity: text_field(map, &["severity", "risk", "level"])
-                .unwrap_or_else(|| "High".into()),
+            severity: "Low".into(),
         },
         _ => default_sig(),
     }
 }
+
 
 fn collect_signatures(value: &Value, output: &mut HashMap<String, Sig>) {
     match value {
@@ -739,6 +782,7 @@ fn add_engine_threat(
     severity: String,
     engine: &str,
     cancel: &AtomicBool,
+    paused: &AtomicBool,
 ) {
     if cancel.load(Ordering::Relaxed) {
         return;
@@ -754,7 +798,7 @@ fn add_engine_threat(
         return;
     }
 
-    let sha256 = hash_file(Path::new(&path), cancel)
+    let sha256 = hash_file(Path::new(&path), cancel, paused)
         .ok()
         .flatten()
         .unwrap_or_default();
@@ -768,6 +812,7 @@ fn add_engine_threat(
         name: full_name,
         severity,
         sha256,
+        detection_source: engine.to_ascii_lowercase(),
     });
 }
 
@@ -994,6 +1039,7 @@ fn run_clamav(
     cancel: &AtomicBool,
     base_threats: usize,
     progress_percent: &Arc<Mutex<f64>>,
+    paused: &AtomicBool,
 ) -> Result<Vec<Threat>, String> {
     if files.is_empty() || cancel.load(Ordering::Relaxed) {
         return Ok(Vec::new());
@@ -1037,6 +1083,7 @@ fn run_clamav(
                     name: format!("ClamAV: {}", detection.name),
                     severity: detection.severity.clone(),
                     sha256: hash.clone(),
+                    detection_source: "clamav".into(),
                 });
             }
         } else {
@@ -1133,6 +1180,7 @@ fn run_clamav(
                 "High".into(),
                 "ClamAV",
                 cancel,
+                paused,
             );
         }
 
@@ -1192,6 +1240,7 @@ fn run_yara(
     cancel: &AtomicBool,
     base_threats: usize,
     progress_percent: &Arc<Mutex<f64>>,
+    paused: &AtomicBool,
 ) -> Result<Vec<Threat>, String> {
     if files.is_empty() || cancel.load(Ordering::Relaxed) {
         return Ok(Vec::new());
@@ -1271,6 +1320,7 @@ fn run_yara(
                 severity.to_string(),
                 "YARA",
                 cancel,
+                paused,
             );
         }
     }
